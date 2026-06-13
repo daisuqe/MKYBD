@@ -6,10 +6,22 @@
     <title>Unity Web Player | MKYBD</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
+      <style>
+      .unity-mobile #unity-canvas {
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 100vw !important;
+        height: 53.55vw !important;
+        max-width: 186.72vh !important;
+        max-height: 100vh !important;
+      }
+    </style>
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
-      <canvas id="unity-canvas" width=844 height=390 tabindex="-1"></canvas>
+      <canvas id="unity-canvas" width=844 height=452 tabindex="-1"></canvas>
       <div id="unity-loading-bar">
         <div id="unity-logo"></div>
         <div id="unity-progress-bar-empty">
@@ -105,7 +117,7 @@
       } else {
         // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
         canvas.style.width = "844px";
-        canvas.style.height = "390px";
+        canvas.style.height = "452px";
       }
 
       document.querySelector("#unity-loading-bar").style.display = "block";
