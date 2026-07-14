@@ -12,7 +12,11 @@ body {
     color: #dedede;
     font-family: 'Inter', 'Outfit', sans-serif;
     overflow: hidden;
-    height: 100vh;
+    height: 100dvh; /* Dynamic Viewport Heightでツールバー開閉時のズレを防止 */
+    width: 100%;
+    position: fixed; /* タッチスクロール等による画面ズレを絶対防止 */
+    top: 0;
+    left: 0;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -32,6 +36,7 @@ body {
     padding: 10px;
     position: relative;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    container-type: inline-size; /* コンテナクエリを有効にしてキー内の比率を完全同期 */
 }
 
 /* 表示エリア */
@@ -115,7 +120,7 @@ body {
     height: 100%;
     max-height: 76px; /* キー自体の物理的な膨張・はみ出しを防ぐ */
     background-color: #424242; /* defaultKeyColor */
-    border-radius: 14px; /* KEY_RAD */
+    border-radius: 1.6cqw; /* コンテナ幅に対する角丸比率を固定（携帯/縦画面での歪みを防止） */
     border: none;
     color: #dedede;
     font-weight: bold;
@@ -135,37 +140,43 @@ body {
     transform: scale(0.95);
 }
 
-/* 文字数・ケースに応じたフォントサイズ定義 */
+/* 文字数・ケースに応じたフォントサイズ定義 (コンテナ相対cqw単位で縦画面でも文字縮小が完全同期) */
 .key.char-len-1-lower {
-    font-size: 70px; /* キー高（76px）にきれいに収まる最大サイズ */
+    font-size: 8.3cqw;
     line-height: 1;
 }
 
 /* qypjg 用のディセンダ補正（上に引き上げる） */
 .key.char-len-1-lower.descender-key {
-    padding-bottom: 12px;
+    padding-bottom: 1.4cqw;
 }
 
 .key.char-len-1-upper,
 .key.char-len-1-default {
-    font-size: 56px; /* 大文字は最大56px（キー高の約7.5割） */
+    font-size: 8.0cqw; /* さらに1割拡大 (7.3cqw から 8.0cqw) */
     line-height: 1;
 }
 
+/* 大文字のみ位置を「ちょびっと左、少し下」に微調整 */
+.key.char-len-1-upper {
+    padding-top: 0.7cqw;   /* さらに下へ */
+    padding-right: 0.3cqw; /* さらに左へ */
+}
+
 .key.char-len-2 {
-    font-size: 44px; /* BS等。極限サイズ */
+    font-size: 5.2cqw;
 }
 
 .key.char-len-3 {
-    font-size: 34px; /* Tab, Ins等。極限サイズ */
+    font-size: 4.0cqw;
 }
 
 .key.char-len-4 {
-    font-size: 27px; /* Menu等。極限サイズ */
+    font-size: 3.2cqw;
 }
 
 .key.char-len-5 {
-    font-size: 24px; /* Enter, Space等。キーの横幅いっぱい */
+    font-size: 2.8cqw;
 }
 
 /* キーボードモードごとのカラー設定 */
@@ -177,7 +188,7 @@ body {
 }
 
 .keyboard-upper .key {
-    background-color: #424242; /* upperKeyColor */
+    background-color: #1a3556; /* 青みを強めたダークブルー */
 }
 .keyboard-upper .key:active {
     background-color: #bfbfbf;
@@ -250,7 +261,7 @@ body {
 /* Switchキーのテキスト改行 */
 .key.btn-switch {
     line-height: 1.05;
-    font-size: 36px; /* さらに拡大 */
+    font-size: 4.2cqw; /* cqwに変更してレスポンシブ同期 */
     font-weight: bold;
 }
 
@@ -436,15 +447,15 @@ body {
 
 .drag-guide-key {
     position: absolute;
-    border-radius: 14px;
+    border-radius: 1.6cqw; /* キーの比率と同期 */
     display: flex;
     justify-content: center;
     align-items: center;
     color: #dedede;
-    font-size: 56px; /* 大文字キーと同等サイズ */
+    font-size: 6.6cqw; /* 大文字キーと同等サイズに比率化 */
     font-weight: bold;
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.6);
-    border: 3px solid rgba(255, 255, 255, 0.4);
+    border: 0.35cqw solid rgba(255, 255, 255, 0.4); /* ボーダー幅も比率化 */
     transition: transform 0.1s, border-color 0.1s, box-shadow 0.1s;
 }
 

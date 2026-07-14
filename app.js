@@ -73,6 +73,28 @@ window.addEventListener('DOMContentLoaded', () => {
         cursorVisible = !cursorVisible;
         renderDisplay();
     }, 530);
+
+    // 画面位置強制リセット（iPhone Safari横画面のアドレスバー格納・座標ズレ防止）
+    function resetViewport() {
+        window.scrollTo(0, 0);
+        if (document.body) document.body.scrollTop = 0;
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+    }
+
+    // 起動1秒後、3秒後に全画面表示を促すリセット
+    setTimeout(resetViewport, 1000);
+    setTimeout(resetViewport, 3000);
+
+    // 画面サイズ変更や画面回転時にも追従してリセット
+    window.addEventListener('resize', resetViewport);
+    window.addEventListener('orientationchange', resetViewport);
+    
+    // タッチによる余計なバウンススクロールを防止
+    document.addEventListener('touchmove', (e) => {
+        if (e.touches.length > 1) {
+            e.preventDefault(); // ピンチイン・アウトによる拡大防止
+        }
+    }, { passive: false });
 });
 
 // レンダリング: 表示エリアの描画
@@ -437,7 +459,7 @@ function showDragGuides() {
         dragGuideContainer = document.createElement('div');
         dragGuideContainer.className = 'drag-guide-container';
         dragGuideContainer.innerHTML = `
-            <div class="drag-guide-key" id="guideA" style="background-color: #424242;">A</div>
+            <div class="drag-guide-key" id="guideA" style="background-color: #1a3556;">A</div>
             <div class="drag-guide-key" id="guideAt" style="background-color: #4a4a4a;">&</div>
             <div class="drag-guide-key" id="guideOne" style="background-color: #11353c;">1</div>
         `;
@@ -556,9 +578,13 @@ function setupSwitchKeyEvents(btn) {
         indUpRight.style.transform = `translate(${size * 0.55}px, -${size * 0.55}px) rotate(45deg)`;
         indRight.style.transform = `translate(${size * 0.7}px, 0px) rotate(90deg)`;
 
+        const indicatorSize = size * 0.4;
         [indUp, indUpRight, indRight].forEach(ind => {
-            ind.style.left = `${(size - 30) / 2}px`;
-            ind.style.top = `${(size - 30) / 2}px`;
+            ind.style.width = `${indicatorSize}px`;
+            ind.style.height = `${indicatorSize}px`;
+            ind.style.fontSize = `${indicatorSize * 1.06}px`; /* 動的にフォントサイズと寸法をスケーリング */
+            ind.style.left = `${(size - indicatorSize) / 2}px`;
+            ind.style.top = `${(size - indicatorSize) / 2}px`;
             ind.style.color = '#dedede';
         });
     };
