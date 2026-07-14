@@ -211,6 +211,21 @@ body {
     background-color: #bfbfbf;
 }
 
+.keyboard-hiragana .key {
+    background-color: #333030; /* 暗いグレー */
+    color: #dedede; /* 文字色は白 */
+}
+.keyboard-hiragana .key:active {
+    background-color: #4a4545;
+}
+.keyboard-hiragana .key.functional,
+.keyboard-hiragana .key.btn-nav,
+.keyboard-hiragana .key.btn-enter,
+.keyboard-hiragana .key.btn-enter-bs,
+.keyboard-hiragana .key.btn-bs {
+    color: #dedede;
+}
+
 /* 特殊キーカラー */
 .key.btn-enter {
     background-color: #0d5e17 !important; /* enterKeyColor */
@@ -244,10 +259,17 @@ body {
     background-color: #918649 !important;
 }
 
-.key.btn-menu, .key.btn-switch {
+.key.btn-menu {
     background-color: #e6730f !important; /* saveKeyColor */
 }
-.key.btn-menu:active, .key.btn-switch:active {
+.key.btn-menu:active {
+    background-color: #bfbfbf !important;
+}
+
+.key.btn-switch {
+    background-color: #e6730f !important; /* 元のオレンジ */
+}
+.key.btn-switch:active {
     background-color: #bfbfbf !important;
 }
 

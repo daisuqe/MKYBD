@@ -3,7 +3,8 @@ const KeyboardMode = {
     Lower: 'Lower',
     Upper: 'Upper',
     Number: 'Number',
-    Symbol: 'Symbol'
+    Symbol: 'Symbol',
+    Hiragana: 'Hiragana'
 };
 
 let currentMode = KeyboardMode.Lower;
@@ -14,6 +15,50 @@ let charIndex = 0;
 let scrollIndex = 0;
 let isInsertMode = true;
 let cursorVisible = true;
+let romajiBuffer = "";
+
+const romajiMap = {
+    "a": "あ", "i": "い", "u": "う", "e": "え", "o": "お",
+    "ka": "か", "ki": "き", "ku": "く", "ke": "け", "ko": "こ",
+    "sa": "さ", "shi": "し", "si": "し", "su": "す", "se": "せ", "so": "そ",
+    "ta": "た", "chi": "ち", "ti": "ち", "tsu": "つ", "tu": "つ", "te": "て", "to": "と",
+    "na": "な", "ni": "に", "nu": "ぬ", "ne": "ね", "no": "の",
+    "ha": "は", "hi": "ひ", "fu": "ふ", "hu": "ふ", "he": "へ", "ho": "ほ",
+    "ma": "ま", "mi": "み", "mu": "む", "me": "め", "mo": "も",
+    "ya": "や", "yi": "い", "yu": "ゆ", "ye": "いぇ", "yo": "よ",
+    "ra": "ら", "ri": "り", "ru": "る", "re": "れ", "ro": "ろ",
+    "wa": "わ", "wi": "うぃ", "wu": "う", "we": "うぇ", "wo": "を",
+    "ga": "が", "gi": "ぎ", "gu": "ぐ", "ge": "げ", "go": "ご",
+    "za": "ざ", "zi": "じ", "ji": "じ", "zu": "ず", "ze": "ぜ", "zo": "ぞ",
+    "da": "だ", "di": "ぢ", "du": "づ", "de": "で", "do": "ど",
+    "ba": "ば", "bi": "び", "bu": "ぶ", "be": "べ", "bo": "ぼ",
+    "pa": "ぱ", "pi": "ぴ", "pu": "ぷ", "pe": "ぺ", "po": "ぽ",
+    "kya": "きゃ", "kyi": "きぃ", "kyu": "きゅ", "kye": "きぇ", "kyo": "きょ",
+    "sya": "しゃ", "syi": "しぃ", "syu": "しゅ", "sye": "しぇ", "syo": "しょ",
+    "sha": "しゃ", "shi": "し", "shu": "しゅ", "she": "しぇ", "sho": "しょ",
+    "tya": "ちゃ", "tyi": "ちぃ", "tyu": "ちゅ", "tye": "ちぇ", "tyo": "ちょ",
+    "cha": "ちゃ", "chi": "ち", "chu": "ちゅ", "che": "ちぇ", "cho": "ちょ",
+    "cya": "ちゃ", "cyi": "ちぃ", "cyu": "ちゅ", "cye": "ちぇ", "cyo": "ちょ",
+    "nya": "にゃ", "nyi": "にぃ", "nyu": "にゅ", "nye": "にぇ", "nyo": "にょ",
+    "hya": "ひゃ", "hyi": "ひぃ", "hyu": "ひゅ", "hye": "ひぇ", "hyo": "ひょ",
+    "mya": "みゃ", "myi": "みぃ", "myu": "みゅ", "mye": "みぇ", "myo": "みょ",
+    "rya": "りゃ", "ryi": "りぃ", "ryu": "りゅ", "rye": "りぇ", "ryo": "りょ",
+    "gya": "ぎゃ", "gyi": "ぎぃ", "gyu": "ぎゅ", "gye": "ぎぇ", "gyo": "ぎょ",
+    "zya": "じゃ", "zyi": "じぃ", "zyu": "じゅ", "zye": "じぇ", "zyo": "じょ",
+    "ja": "じゃ", "ji": "じ", "ju": "じゅ", "je": "じぇ", "jo": "じょ",
+    "dya": "ぢゃ", "dyi": "ぢぃ", "dyu": "ぢゅ", "dye": "ぢぇ", "dyo": "ぢょ",
+    "bya": "びゃ", "byi": "びぃ", "byu": "びゅ", "bye": "びぇ", "byo": "びょ",
+    "pya": "ぴゃ", "pyi": "ぴぃ", "pyu": "ぷゅ", "pye": "ぴぇ", "pyo": "ぴょ",
+    "tsa": "つぁ", "tsi": "つぃ", "tse": "つぇ", "tso": "つぉ",
+    "fa": "ふぁ", "fi": "ふぃ", "fe": "ふぇ", "fo": "ふぉ", "fyu": "ふゅ",
+    "nn": "ん", "xn": "ん", "n": "ん",
+    "la": "ぁ", "li": "ぃ", "lu": "ぅ", "le": "ぇ", "lo": "ぉ",
+    "lya": "ゃ", "lyu": "ゅ", "lyo": "ょ", "ltu": "っ", "ltsu": "っ",
+    "xa": "ぁ", "xi": "ぃ", "xu": "ぅ", "xe": "ぇ", "xo": "ぉ",
+    "xya": "ゃ", "xyu": "ゅ", "xyo": "ょ", "xtu": "っ", "xtsu": "っ",
+    "wyu": "うゅ", "va": "ヴぁ", "vi": "ヴぃ", "vu": "ヴ", "ve": "ヴぇ", "vo": "ヴぉ",
+    "who": "うぉ"
+};
 
 // DOM要素のキャッシュ
 const displayArea = document.getElementById('displayArea');
@@ -51,6 +96,12 @@ const keysSymbol = [
     ["!", "\"", "#", "$", "%", "&", "'", "[", "]", "Menu"],
     ["=", "~", "|", "`", "{", "}", "", "↑", "BS", "Enter"],
     ["Switch", "<", ">", "?", "_", "\\", "←", "↓", "→", "Space"]
+];
+
+const keysHiragana = [
+    ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+    ["A", "S", "D", "F", "H", "J", "G", "K", "L", "Enter"],
+    ["Switch", "Z", "X", "C", "V", "B", "N", "M", ".", "Space"]
 ];
 
 // 初期設定と読み込み
@@ -183,6 +234,10 @@ function buildKeyboard() {
                 keyRows = keysUpper;
                 modeClass = 'keyboard-upper';
                 break;
+            case KeyboardMode.Hiragana:
+                keyRows = keysHiragana;
+                modeClass = 'keyboard-hiragana';
+                break;
             case KeyboardMode.Number:
                 keyRows = keysNumber;
                 modeClass = 'keyboard-number';
@@ -270,7 +325,7 @@ function buildKeyboard() {
             }
 
             if (displayLength === 1) {
-                if (isTempShiftMode || currentMode === KeyboardMode.Upper) {
+                if (isTempShiftMode || currentMode === KeyboardMode.Upper || currentMode === KeyboardMode.Hiragana) {
                     button.classList.add('char-len-1-upper');
                 } else if (currentMode === KeyboardMode.Lower) {
                     button.classList.add('char-len-1-lower');
@@ -309,40 +364,132 @@ function handleKeyInput(key) {
     if (key === "") return;
 
     if (key === "Tab") {
+        flushRomajiBuffer();
         insertText("    ");
     } else if (key === "Ins") {
+        flushRomajiBuffer();
         isInsertMode = !isInsertMode;
         buildKeyboard();
         renderDisplay();
     } else if (key === "BS") {
+        if (currentMode === KeyboardMode.Hiragana && romajiBuffer.length > 0) {
+            romajiBuffer = romajiBuffer.slice(0, -1);
+        }
         deleteChar();
     } else if (key === "Menu") {
+        flushRomajiBuffer();
         openMenu();
     } else if (key === "Enter") {
+        flushRomajiBuffer();
         onEnterPressed();
     } else if (key === "←") {
+        flushRomajiBuffer();
         moveCursor(-1, 0);
     } else if (key === "→") {
+        flushRomajiBuffer();
         moveCursor(1, 0);
     } else if (key === "↑") {
+        flushRomajiBuffer();
         moveCursor(0, -1);
     } else if (key === "↓") {
+        flushRomajiBuffer();
         moveCursor(0, 1);
     } else if (key === "Space") {
+        flushRomajiBuffer();
         insertText(" ");
     } else {
         // 通常の文字入力
         let char = key;
-        // 小文字モードの場合は小文字に変換して入力
-        if (currentMode === KeyboardMode.Lower && !isTempShiftMode) {
-            char = key.toLowerCase();
+        if (currentMode === KeyboardMode.Hiragana) {
+            handleHiraganaInput(key.toLowerCase());
+        } else {
+            // 小文字モードの場合は小文字に変換して入力
+            if (currentMode === KeyboardMode.Lower && !isTempShiftMode) {
+                char = key.toLowerCase();
+            }
+            clearRomajiBuffer();
+            insertText(char);
         }
-        insertText(char);
     }
 }
 
-// テキスト挿入
-function insertText(text) {
+function handleHiraganaInput(char) {
+    if (!/^[a-z]$/.test(char)) {
+        flushRomajiBuffer();
+        insertText(char);
+        return;
+    }
+
+    romajiBuffer += char;
+    insertText(char);
+    checkAndConvertRomaji();
+}
+
+function checkAndConvertRomaji() {
+    if (!romajiBuffer) return;
+
+    for (let len = Math.min(3, romajiBuffer.length); len >= 1; len--) {
+        const substr = romajiBuffer.substring(0, len);
+        
+        if (substr === 'n') {
+            if (romajiBuffer.length > 1) {
+                const nextChar = romajiBuffer.charAt(1);
+                if (nextChar === 'n') {
+                    replaceLastChars(2, 'ん');
+                    romajiBuffer = romajiBuffer.substring(2);
+                    checkAndConvertRomaji();
+                    return;
+                } else if (!/^[aiueoy]$/.test(nextChar)) {
+                    replaceLastChars(romajiBuffer.length, 'ん' + romajiBuffer.substring(1));
+                    romajiBuffer = romajiBuffer.substring(1);
+                    checkAndConvertRomaji();
+                    return;
+                }
+            }
+            continue;
+        }
+
+        if (romajiMap[substr]) {
+            const converted = romajiMap[substr];
+            replaceLastChars(romajiBuffer.length, converted + romajiBuffer.substring(len));
+            romajiBuffer = romajiBuffer.substring(len);
+            checkAndConvertRomaji();
+            return;
+        }
+    }
+
+    if (romajiBuffer.length >= 2) {
+        const c1 = romajiBuffer.charAt(0);
+        const c2 = romajiBuffer.charAt(1);
+        if (c1 === c2 && c1 !== 'n' && /^[bcdfghjklmpqrstvwxyz]$/.test(c1)) {
+            replaceLastChars(romajiBuffer.length, 'っ' + romajiBuffer.substring(1));
+            romajiBuffer = romajiBuffer.substring(1);
+            checkAndConvertRomaji();
+            return;
+        }
+    }
+}
+
+function replaceLastChars(count, replacement) {
+    for (let i = 0; i < count; i++) {
+        deleteCharWithoutRender();
+    }
+    insertTextWithoutRender(replacement);
+    renderDisplay();
+}
+
+function deleteCharWithoutRender() {
+    let curLine = lines[lineIndex];
+    charIndex = Math.max(0, Math.min(charIndex, curLine.length));
+
+    if (charIndex > 0) {
+        curLine = curLine.substring(0, charIndex - 1) + curLine.substring(charIndex);
+        charIndex--;
+        lines[lineIndex] = curLine;
+    }
+}
+
+function insertTextWithoutRender(text) {
     while (lines.length <= lineIndex) {
         lines.push("");
     }
@@ -357,47 +504,27 @@ function insertText(text) {
         curLine = curLine.substring(0, charIndex) + text + curLine.substring(charIndex + replaceLen);
         charIndex += text.length;
     }
-
     lines[lineIndex] = curLine;
-    
-    // 最大行数制御
-    const MAX_LINES = 10000;
-    while (lines.length > MAX_LINES) {
-        lines.shift();
-        lineIndex = Math.max(0, lineIndex - 1);
-    }
-
     saveToLocalStorage();
-    renderDisplay();
 }
 
-// 文字削除
-function deleteChar() {
-    let curLine = lines[lineIndex];
-    charIndex = Math.max(0, Math.min(charIndex, curLine.length));
-
-    if (charIndex > 0) {
-        curLine = curLine.substring(0, charIndex - 1) + curLine.substring(charIndex);
-        charIndex--;
-        lines[lineIndex] = curLine;
-    } else if (lineIndex > 0) {
-        const prevLine = lines[lineIndex - 1];
-        const prevLen = prevLine.length;
-        lines[lineIndex - 1] = prevLine + curLine;
-        lines.splice(lineIndex, 1);
-        lineIndex--;
-        charIndex = prevLen;
+function flushRomajiBuffer() {
+    if (!romajiBuffer) return;
+    if (romajiBuffer === 'n') {
+        replaceLastChars(1, 'ん');
     }
-
-    saveToLocalStorage();
-    renderDisplay();
+    romajiBuffer = "";
 }
 
-// Enter押下
-function onEnterPressed() {
-    const MAX_LINES = 10000;
-    if (lines.length >= MAX_LINES) return;
+function clearRomajiBuffer() {
+    romajiBuffer = "";
+}
 
+// テキスト挿入
+function insertText(text) {
+    while (lines.length <= lineIndex) {
+        lines.push("");
+    }
     let curLine = lines[lineIndex];
     charIndex = Math.max(0, Math.min(charIndex, curLine.length));
 
@@ -453,12 +580,13 @@ function getTargetKeyRect(row, col) {
     return null;
 }
 
-// a, s, z キーの上にドラッグガイド (A, @, 1) を表示する
+// q, a, s, z キーの上にドラッグガイド (あ, A, @, 1) を表示する
 function showDragGuides() {
     if (!dragGuideContainer) {
         dragGuideContainer = document.createElement('div');
         dragGuideContainer.className = 'drag-guide-container';
         dragGuideContainer.innerHTML = `
+            <div class="drag-guide-key" id="guideHira" style="background-color: #333030; color: #dedede;">あ</div>
             <div class="drag-guide-key" id="guideA" style="background-color: #1a3556;">A</div>
             <div class="drag-guide-key" id="guideAt" style="background-color: #4a4a4a;">&</div>
             <div class="drag-guide-key" id="guideOne" style="background-color: #11353c;">1</div>
@@ -466,32 +594,36 @@ function showDragGuides() {
         document.body.appendChild(dragGuideContainer);
     }
     
-    // a = row 1, col 0
-    // s = row 1, col 1
-    // z = row 2, col 1
-    const rectA = getTargetKeyRect(1, 0);
-    const rectS = getTargetKeyRect(1, 1);
-    const rectZ = getTargetKeyRect(2, 1);
+    const rectHira = getTargetKeyRect(0, 0); // qキーの位置 (Aの1つ上)
+    const rectA = getTargetKeyRect(1, 0); // aキーの位置
+    const rectAt = getTargetKeyRect(1, 1); // sキーの位置
+    const rectOne = getTargetKeyRect(2, 1); // zキーの位置
 
-    if (rectA && rectS && rectZ) {
+    if (rectHira && rectA && rectAt && rectOne) {
+        const guideHira = document.getElementById('guideHira');
         const guideA = document.getElementById('guideA');
         const guideAt = document.getElementById('guideAt');
         const guideOne = document.getElementById('guideOne');
+
+        guideHira.style.left = `${rectHira.left}px`;
+        guideHira.style.top = `${rectHira.top}px`;
+        guideHira.style.width = `${rectHira.width}px`;
+        guideHira.style.height = `${rectHira.height}px`;
 
         guideA.style.left = `${rectA.left}px`;
         guideA.style.top = `${rectA.top}px`;
         guideA.style.width = `${rectA.width}px`;
         guideA.style.height = `${rectA.height}px`;
 
-        guideAt.style.left = `${rectS.left}px`;
-        guideAt.style.top = `${rectS.top}px`;
-        guideAt.style.width = `${rectS.width}px`;
-        guideAt.style.height = `${rectS.height}px`;
+        guideAt.style.left = `${rectAt.left}px`;
+        guideAt.style.top = `${rectAt.top}px`;
+        guideAt.style.width = `${rectAt.width}px`;
+        guideAt.style.height = `${rectAt.height}px`;
 
-        guideOne.style.left = `${rectZ.left}px`;
-        guideOne.style.top = `${rectZ.top}px`;
-        guideOne.style.width = `${rectZ.width}px`;
-        guideOne.style.height = `${rectZ.height}px`;
+        guideOne.style.left = `${rectOne.left}px`;
+        guideOne.style.top = `${rectOne.top}px`;
+        guideOne.style.width = `${rectOne.width}px`;
+        guideOne.style.height = `${rectOne.height}px`;
 
         dragGuideContainer.style.display = 'block';
     }
@@ -500,34 +632,34 @@ function showDragGuides() {
 function hideDragGuides() {
     if (dragGuideContainer) {
         dragGuideContainer.style.display = 'none';
-        document.getElementById('guideA').classList.remove('active');
-        document.getElementById('guideAt').classList.remove('active');
-        document.getElementById('guideOne').classList.remove('active');
+        const guideHira = document.getElementById('guideHira');
+        const guideA = document.getElementById('guideA');
+        const guideAt = document.getElementById('guideAt');
+        const guideOne = document.getElementById('guideOne');
+        if (guideHira) guideHira.classList.remove('active');
+        if (guideA) guideA.classList.remove('active');
+        if (guideAt) guideAt.classList.remove('active');
+        if (guideOne) guideOne.classList.remove('active');
     }
 }
 
-// 座標から現在ポインターがどのガイドキーの上にあるか取得
 function getActiveGuideAtPoint(x, y) {
     if (!dragGuideContainer || dragGuideContainer.style.display === 'none') return null;
-
     const guides = [
+        { id: 'guideHira', mode: KeyboardMode.Hiragana },
         { id: 'guideA', mode: KeyboardMode.Upper },
         { id: 'guideAt', mode: KeyboardMode.Symbol },
         { id: 'guideOne', mode: KeyboardMode.Number }
     ];
-
     for (const guide of guides) {
         const el = document.getElementById(guide.id);
         const rect = el.getBoundingClientRect();
-        if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-            return guide;
-        }
+        if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) return guide;
     }
     return null;
 }
 
 function setupSwitchKeyEvents(btn) {
-    // フリックガイドインジケーターの作成 (矢印用)
     if (!flickIndicators) {
         flickIndicators = document.createElement('div');
         flickIndicators.className = 'flick-indicators';
@@ -542,50 +674,39 @@ function setupSwitchKeyEvents(btn) {
     const startHandler = (e) => {
         e.preventDefault();
         switchPointerId = e.pointerId;
-
         switchTouchStart = { x: e.clientX, y: e.clientY };
         isFlickTriggered = false;
-
-        // 押した瞬間に小文字モードなら一時大文字(Shift)化する
         if (currentMode === KeyboardMode.Lower) {
             isTempShiftMode = true;
             buildKeyboard();
         }
-
-        // 矢印インジケーター表示
         const activeBtn = document.querySelector('.btn-switch') || btn;
         const rect = activeBtn.getBoundingClientRect();
         const container = document.querySelector('.app-container') || document.body;
         const containerRect = container.getBoundingClientRect();
-
-        if (flickIndicators.parentNode !== container) {
-            container.appendChild(flickIndicators);
-        }
-
+        if (flickIndicators.parentNode !== container) container.appendChild(flickIndicators);
         const size = rect.width;
-        
         flickIndicators.style.left = `${rect.left - containerRect.left}px`;
         flickIndicators.style.top = `${rect.top - containerRect.top}px`;
         flickIndicators.style.width = `${size}px`;
         flickIndicators.style.height = `${size}px`;
         flickIndicators.style.display = 'block';
-
         const indUp = document.getElementById('indUp');
         const indUpRight = document.getElementById('indUpRight');
         const indRight = document.getElementById('indRight');
-
         indUp.style.transform = `translate(0px, -${size * 0.7}px) rotate(0deg)`;
         indUpRight.style.transform = `translate(${size * 0.55}px, -${size * 0.55}px) rotate(45deg)`;
         indRight.style.transform = `translate(${size * 0.7}px, 0px) rotate(90deg)`;
-
         const indicatorSize = size * 0.4;
         [indUp, indUpRight, indRight].forEach(ind => {
             ind.style.width = `${indicatorSize}px`;
             ind.style.height = `${indicatorSize}px`;
-            ind.style.fontSize = `${indicatorSize * 1.06}px`; /* 動的にフォントサイズと寸法をスケーリング */
+            ind.style.fontSize = `${indicatorSize * 1.06}px`;
             ind.style.left = `${(size - indicatorSize) / 2}px`;
             ind.style.top = `${(size - indicatorSize) / 2}px`;
             ind.style.color = '#dedede';
+            ind.style.backgroundColor = 'transparent';
+            ind.style.borderRadius = '0';
         });
     };
 
@@ -598,27 +719,25 @@ function setupSwitchKeyEvents(btn) {
         const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
         if (distance > 30) {
-            // オレンジのキーの外に30px以上はみ出た場合 ➔ フリック状態
             if (!isFlickTriggered) {
                 isFlickTriggered = true;
-
-                // 一時大文字(Shift)解除して、背景キーボードを小文字に戻す
                 if (isTempShiftMode) {
                     isTempShiftMode = false;
                     buildKeyboard();
                 }
-
-                // a, s, z の位置に A, @, 1 のフリックボタン（ドラッグガイド）を表示
                 showDragGuides();
             }
 
-            // 現在ポインターが重なっているガイドボタンの強調と記憶
             const guide = getActiveGuideAtPoint(e.clientX, e.clientY);
-            activeGuideMode = guide ? guide.mode : null; // ドラッグ中の状態を記憶
+            activeGuideMode = guide ? guide.mode : null;
+            
+            const guideHira = document.getElementById('guideHira');
             const guideA = document.getElementById('guideA');
             const guideAt = document.getElementById('guideAt');
             const guideOne = document.getElementById('guideOne');
-            if (guideA && guideAt && guideOne) {
+            
+            if (guideHira && guideA && guideAt && guideOne) {
+                guideHira.classList.remove('active');
                 guideA.classList.remove('active');
                 guideAt.classList.remove('active');
                 guideOne.classList.remove('active');
@@ -627,7 +746,7 @@ function setupSwitchKeyEvents(btn) {
                 }
             }
 
-            // 矢印方向ガイドの強調 (角度で簡易判定)
+            // 矢印方向ガイドの強調 (角度で判定)
             const ux = deltaX;
             const uy = -deltaY;
             const angle = Math.atan2(uy, ux) * 180 / Math.PI;
@@ -641,11 +760,11 @@ function setupSwitchKeyEvents(btn) {
             indRight.style.color = '#dedede';
 
             if (angle >= 67.5 && angle < 112.5) {
-                indUp.style.color = '#e6730f';
+                indUp.style.color = '#ffa047';
             } else if (angle >= 22.5 && angle < 67.5) {
-                indUpRight.style.color = '#e6730f';
+                indUpRight.style.color = '#ffa047';
             } else if (angle >= -22.5 && angle < 22.5) {
-                indRight.style.color = '#e6730f';
+                indRight.style.color = '#ffa047';
             }
         } else {
             // オレンジのキーの中にいる場合（距離30px以内 ➔ パカパカ切り替えを防ぐ）
@@ -852,33 +971,43 @@ function setupPhysicalKeyboard() {
 
         if (e.key === "Backspace") {
             e.preventDefault();
+            if (currentMode === KeyboardMode.Hiragana && romajiBuffer.length > 0) {
+                romajiBuffer = romajiBuffer.slice(0, -1);
+            }
             deleteChar();
         } else if (e.key === "Enter") {
             e.preventDefault();
+            flushRomajiBuffer();
             onEnterPressed();
         } else if (e.key === "Tab") {
             e.preventDefault();
+            flushRomajiBuffer();
             insertText("    ");
         } else if (e.key === "ArrowLeft") {
             e.preventDefault();
+            flushRomajiBuffer();
             moveCursor(-1, 0);
         } else if (e.key === "ArrowRight") {
             e.preventDefault();
+            flushRomajiBuffer();
             moveCursor(1, 0);
         } else if (e.key === "ArrowUp") {
             e.preventDefault();
+            flushRomajiBuffer();
             moveCursor(0, -1);
         } else if (e.key === "ArrowDown") {
             e.preventDefault();
+            flushRomajiBuffer();
             moveCursor(0, 1);
         } else if (e.key === "Insert") {
             e.preventDefault();
+            flushRomajiBuffer();
             isInsertMode = !isInsertMode;
             buildKeyboard();
             renderDisplay();
         } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
             e.preventDefault();
-            insertText(e.key);
+            handleKeyInput(e.key);
         }
     });
 }
