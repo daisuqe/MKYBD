@@ -4,7 +4,8 @@ const KeyboardMode = {
     Upper: 'Upper',
     Number: 'Number',
     Symbol: 'Symbol',
-    Hiragana: 'Hiragana'
+    Hiragana: 'Hiragana',
+    Katakana: 'Katakana'
 };
 
 let currentMode = KeyboardMode.Lower;
@@ -99,9 +100,15 @@ const keysSymbol = [
 ];
 
 const keysHiragana = [
-    ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
-    ["A", "S", "D", "F", "H", "J", "G", "K", "L", "Enter"],
-    ["Switch", "Z", "X", "C", "V", "B", "N", "M", ".", "Space"]
+    ["ー", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+    ["A", "S", "D", "F", "H", "J", "G", "K", "L", "BS"],
+    ["Switch", "Z", "、", "C", "V", "B", "N", "M", "。", "Enter"]
+];
+
+const keysKatakana = [
+    ["ー", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+    ["A", "S", "D", "F", "H", "J", "G", "K", "L", "BS"],
+    ["Switch", "Z", "、", "C", "V", "B", "N", "M", "。", "Enter"]
 ];
 
 // 初期設定と読み込み
@@ -238,6 +245,10 @@ function buildKeyboard() {
                 keyRows = keysHiragana;
                 modeClass = 'keyboard-hiragana';
                 break;
+            case KeyboardMode.Katakana:
+                keyRows = keysKatakana;
+                modeClass = 'keyboard-katakana';
+                break;
             case KeyboardMode.Number:
                 keyRows = keysNumber;
                 modeClass = 'keyboard-number';
@@ -325,7 +336,7 @@ function buildKeyboard() {
             }
 
             if (displayLength === 1) {
-                if (isTempShiftMode || currentMode === KeyboardMode.Upper || currentMode === KeyboardMode.Hiragana) {
+                if (isTempShiftMode || currentMode === KeyboardMode.Upper || currentMode === KeyboardMode.Hiragana || currentMode === KeyboardMode.Katakana) {
                     button.classList.add('char-len-1-upper');
                 } else if (currentMode === KeyboardMode.Lower) {
                     button.classList.add('char-len-1-lower');
@@ -402,6 +413,8 @@ function handleKeyInput(key) {
         let char = key;
         if (currentMode === KeyboardMode.Hiragana) {
             handleHiraganaInput(key.toLowerCase());
+        } else if (currentMode === KeyboardMode.Katakana) {
+            handleKatakanaInput(key.toLowerCase());
         } else {
             // 小文字モードの場合は小文字に変換して入力
             if (currentMode === KeyboardMode.Lower && !isTempShiftMode) {
@@ -470,11 +483,34 @@ function checkAndConvertRomaji() {
     }
 }
 
+function handleKatakanaInput(char) {
+    if (!/^[a-z]$/.test(char)) {
+        flushRomajiBuffer();
+        insertText(char);
+        return;
+    }
+
+    romajiBuffer += char;
+    insertText(char);
+    checkAndConvertRomaji();
+}
+
+function hiraToKata(str) {
+    return str.replace(/[\u3041-\u3096]/g, function(match) {
+        const chr = match.charCodeAt(0) + 0x60;
+        return String.fromCharCode(chr);
+    });
+}
+
 function replaceLastChars(count, replacement) {
     for (let i = 0; i < count; i++) {
         deleteCharWithoutRender();
     }
-    insertTextWithoutRender(replacement);
+    let text = replacement;
+    if (currentMode === KeyboardMode.Katakana) {
+        text = hiraToKata(replacement);
+    }
+    insertTextWithoutRender(text);
     renderDisplay();
 }
 
@@ -525,6 +561,58 @@ function insertText(text) {
     while (lines.length <= lineIndex) {
         lines.push("");
     }
+    let curLine = lines[lineIndex];
+    charIndex = Math.max(0, Math.min(charIndex, curLine.length));
+
+    if (isInsertMode) {
+        curLine = curLine.substring(0, charIndex) + text + curLine.substring(charIndex);
+        charIndex += text.length;
+    } else {
+        const replaceLen = Math.min(text.length, curLine.length - charIndex);
+        curLine = curLine.substring(0, charIndex) + text + curLine.substring(charIndex + replaceLen);
+        charIndex += text.length;
+    }
+
+    lines[lineIndex] = curLine;
+    
+    // 最大行数制御
+    const MAX_LINES = 10000;
+    while (lines.length > MAX_LINES) {
+        lines.shift();
+        lineIndex = Math.max(0, lineIndex - 1);
+    }
+
+    saveToLocalStorage();
+    renderDisplay();
+}
+
+// 文字削除
+function deleteChar() {
+    let curLine = lines[lineIndex];
+    charIndex = Math.max(0, Math.min(charIndex, curLine.length));
+
+    if (charIndex > 0) {
+        curLine = curLine.substring(0, charIndex - 1) + curLine.substring(charIndex);
+        charIndex--;
+        lines[lineIndex] = curLine;
+    } else if (lineIndex > 0) {
+        const prevLine = lines[lineIndex - 1];
+        const prevLen = prevLine.length;
+        lines[lineIndex - 1] = prevLine + curLine;
+        lines.splice(lineIndex, 1);
+        lineIndex--;
+        charIndex = prevLen;
+    }
+
+    saveToLocalStorage();
+    renderDisplay();
+}
+
+// Enter押下
+function onEnterPressed() {
+    const MAX_LINES = 10000;
+    if (lines.length >= MAX_LINES) return;
+
     let curLine = lines[lineIndex];
     charIndex = Math.max(0, Math.min(charIndex, curLine.length));
 
@@ -586,21 +674,24 @@ function showDragGuides() {
         dragGuideContainer = document.createElement('div');
         dragGuideContainer.className = 'drag-guide-container';
         dragGuideContainer.innerHTML = `
-            <div class="drag-guide-key" id="guideHira" style="background-color: #333030; color: #dedede;">あ</div>
-            <div class="drag-guide-key" id="guideA" style="background-color: #1a3556;">A</div>
-            <div class="drag-guide-key" id="guideAt" style="background-color: #4a4a4a;">&</div>
-            <div class="drag-guide-key" id="guideOne" style="background-color: #11353c;">1</div>
+            <div class="drag-guide-key" id="guideHira" style="background-color: #6b3749; color: #dedede;">あ</div>
+            <div class="drag-guide-key" id="guideKata" style="background-color: #5c3000; color: #dedede;">ア</div>
+            <div class="drag-guide-key" id="guideA" style="background-color: #0f2d57;">A</div>
+            <div class="drag-guide-key" id="guideAt" style="background-color: #222222;">&</div>
+            <div class="drag-guide-key" id="guideOne" style="background-color: #16464b;">1</div>
         `;
         document.body.appendChild(dragGuideContainer);
     }
     
     const rectHira = getTargetKeyRect(0, 0); // qキーの位置 (Aの1つ上)
+    const rectKata = getTargetKeyRect(0, 1); // wキーの位置 (あ の右隣)
     const rectA = getTargetKeyRect(1, 0); // aキーの位置
     const rectAt = getTargetKeyRect(1, 1); // sキーの位置
     const rectOne = getTargetKeyRect(2, 1); // zキーの位置
 
-    if (rectHira && rectA && rectAt && rectOne) {
+    if (rectHira && rectKata && rectA && rectAt && rectOne) {
         const guideHira = document.getElementById('guideHira');
+        const guideKata = document.getElementById('guideKata');
         const guideA = document.getElementById('guideA');
         const guideAt = document.getElementById('guideAt');
         const guideOne = document.getElementById('guideOne');
@@ -609,6 +700,11 @@ function showDragGuides() {
         guideHira.style.top = `${rectHira.top}px`;
         guideHira.style.width = `${rectHira.width}px`;
         guideHira.style.height = `${rectHira.height}px`;
+
+        guideKata.style.left = `${rectKata.left}px`;
+        guideKata.style.top = `${rectKata.top}px`;
+        guideKata.style.width = `${rectKata.width}px`;
+        guideKata.style.height = `${rectKata.height}px`;
 
         guideA.style.left = `${rectA.left}px`;
         guideA.style.top = `${rectA.top}px`;
@@ -633,10 +729,12 @@ function hideDragGuides() {
     if (dragGuideContainer) {
         dragGuideContainer.style.display = 'none';
         const guideHira = document.getElementById('guideHira');
+        const guideKata = document.getElementById('guideKata');
         const guideA = document.getElementById('guideA');
         const guideAt = document.getElementById('guideAt');
         const guideOne = document.getElementById('guideOne');
         if (guideHira) guideHira.classList.remove('active');
+        if (guideKata) guideKata.classList.remove('active');
         if (guideA) guideA.classList.remove('active');
         if (guideAt) guideAt.classList.remove('active');
         if (guideOne) guideOne.classList.remove('active');
@@ -647,6 +745,7 @@ function getActiveGuideAtPoint(x, y) {
     if (!dragGuideContainer || dragGuideContainer.style.display === 'none') return null;
     const guides = [
         { id: 'guideHira', mode: KeyboardMode.Hiragana },
+        { id: 'guideKata', mode: KeyboardMode.Katakana },
         { id: 'guideA', mode: KeyboardMode.Upper },
         { id: 'guideAt', mode: KeyboardMode.Symbol },
         { id: 'guideOne', mode: KeyboardMode.Number }
@@ -667,6 +766,7 @@ function setupSwitchKeyEvents(btn) {
             <div class="flick-indicator" id="indUp">▲</div>
             <div class="flick-indicator" id="indUpRight">▲</div>
             <div class="flick-indicator" id="indRight">▲</div>
+            <div class="flick-indicator" id="indDownRight">▲</div>
         `;
         document.body.appendChild(flickIndicators);
     }
@@ -694,17 +794,19 @@ function setupSwitchKeyEvents(btn) {
         const indUp = document.getElementById('indUp');
         const indUpRight = document.getElementById('indUpRight');
         const indRight = document.getElementById('indRight');
+        const indDownRight = document.getElementById('indDownRight');
         indUp.style.transform = `translate(0px, -${size * 0.7}px) rotate(0deg)`;
         indUpRight.style.transform = `translate(${size * 0.55}px, -${size * 0.55}px) rotate(45deg)`;
         indRight.style.transform = `translate(${size * 0.7}px, 0px) rotate(90deg)`;
+        indDownRight.style.transform = `translate(${size * 0.55}px, ${size * 0.55}px) rotate(135deg)`;
         const indicatorSize = size * 0.4;
-        [indUp, indUpRight, indRight].forEach(ind => {
+        [indUp, indUpRight, indRight, indDownRight].forEach(ind => {
             ind.style.width = `${indicatorSize}px`;
             ind.style.height = `${indicatorSize}px`;
             ind.style.fontSize = `${indicatorSize * 1.06}px`;
             ind.style.left = `${(size - indicatorSize) / 2}px`;
             ind.style.top = `${(size - indicatorSize) / 2}px`;
-            ind.style.color = '#dedede';
+            ind.style.color = '#e6730f'; // オレンジに変更
             ind.style.backgroundColor = 'transparent';
             ind.style.borderRadius = '0';
         });
@@ -732,12 +834,14 @@ function setupSwitchKeyEvents(btn) {
             activeGuideMode = guide ? guide.mode : null;
             
             const guideHira = document.getElementById('guideHira');
+            const guideKata = document.getElementById('guideKata');
             const guideA = document.getElementById('guideA');
             const guideAt = document.getElementById('guideAt');
             const guideOne = document.getElementById('guideOne');
             
-            if (guideHira && guideA && guideAt && guideOne) {
+            if (guideHira && guideKata && guideA && guideAt && guideOne) {
                 guideHira.classList.remove('active');
+                guideKata.classList.remove('active');
                 guideA.classList.remove('active');
                 guideAt.classList.remove('active');
                 guideOne.classList.remove('active');
@@ -754,10 +858,12 @@ function setupSwitchKeyEvents(btn) {
             const indUp = document.getElementById('indUp');
             const indUpRight = document.getElementById('indUpRight');
             const indRight = document.getElementById('indRight');
+            const indDownRight = document.getElementById('indDownRight');
 
-            indUp.style.color = '#dedede';
-            indUpRight.style.color = '#dedede';
-            indRight.style.color = '#dedede';
+            indUp.style.color = '#e6730f';
+            indUpRight.style.color = '#e6730f';
+            indRight.style.color = '#e6730f';
+            indDownRight.style.color = '#e6730f';
 
             if (angle >= 67.5 && angle < 112.5) {
                 indUp.style.color = '#ffa047';
@@ -765,6 +871,8 @@ function setupSwitchKeyEvents(btn) {
                 indUpRight.style.color = '#ffa047';
             } else if (angle >= -22.5 && angle < 22.5) {
                 indRight.style.color = '#ffa047';
+            } else if (angle >= -67.5 && angle < -22.5) {
+                indDownRight.style.color = '#ffa047';
             }
         } else {
             // オレンジのキーの中にいる場合（距離30px以内 ➔ パカパカ切り替えを防ぐ）
@@ -784,10 +892,12 @@ function setupSwitchKeyEvents(btn) {
             const indUp = document.getElementById('indUp');
             const indUpRight = document.getElementById('indUpRight');
             const indRight = document.getElementById('indRight');
-            if (indUp && indUpRight && indRight) {
-                indUp.style.color = '#dedede';
-                indUpRight.style.color = '#dedede';
-                indRight.style.color = '#dedede';
+            const indDownRight = document.getElementById('indDownRight');
+            if (indUp && indUpRight && indRight && indDownRight) {
+                indUp.style.color = '#e6730f';
+                indUpRight.style.color = '#e6730f';
+                indRight.style.color = '#e6730f';
+                indDownRight.style.color = '#e6730f';
             }
         }
     };

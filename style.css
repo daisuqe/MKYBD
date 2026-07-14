@@ -8,7 +8,7 @@
 }
 
 body {
-    background-color: #0e0e0e;
+    background-color: #050505;
     color: #dedede;
     font-family: 'Inter', 'Outfit', sans-serif;
     overflow: hidden;
@@ -28,8 +28,8 @@ body {
     max-width: 844px;
     height: 100%;
     max-height: 452px;
-    background-color: #141414;
-    border: 1px solid #303030;
+    background-color: #080808; /* もっと黒に近いグレー */
+    border: 1px solid #1c1c1c; /* 境界線を暗く */
     border-radius: 8px;
     display: flex;
     flex-direction: column;
@@ -43,7 +43,7 @@ body {
 .display-wrapper {
     flex: 1;
     background-color: #000000;
-    border: 1px solid #303030;
+    border: 1px solid #1c1c1c; /* 境界線を暗く */
     margin-bottom: 12px;
     border-radius: 6px;
     padding: 10px;
@@ -181,48 +181,66 @@ body {
 
 /* キーボードモードごとのカラー設定 */
 .keyboard-lower .key {
-    background-color: #331c0f; /* lowerKeyColor */
+    background-color: #2a0f02; /* 少し明るくした暗い茶色 */
 }
 .keyboard-lower .key:active {
-    background-color: #bfbfbf;
+    background-color: #3d1b09;
 }
 
 .keyboard-upper .key {
-    background-color: #1a3556; /* 青みを強めたダークブルー */
+    background-color: #0f2d57; /* 少し明るくした暗いネイビー */
 }
 .keyboard-upper .key:active {
-    background-color: #bfbfbf;
+    background-color: #183f73;
 }
 
 .keyboard-number .key {
-    background-color: #4a4a4a; /* default for number mode */
+    background-color: #222222; /* もっと暗いグレー */
 }
 .keyboard-number .key.blue-number {
-    background-color: #11353c; /* numberKeyColor (0123456789./*-+) */
+    background-color: #16464b; /* 中間の明るさで少し彩度を高めたティール (0123456789./*-+) */
+}
+.keyboard-number .key.blue-number:active {
+    background-color: #205a60;
 }
 .keyboard-number .key:active {
     background-color: #bfbfbf;
 }
 
 .keyboard-symbol .key {
-    background-color: #4a4a4a; /* symbolKeyColor */
+    background-color: #222222; /* もっと暗いグレー */
 }
 .keyboard-symbol .key:active {
     background-color: #bfbfbf;
 }
 
 .keyboard-hiragana .key {
-    background-color: #333030; /* 暗いグレー */
+    background-color: #6b3749; /* 少し明るくしたピンク寄りの赤みがかったグレー */
     color: #dedede; /* 文字色は白 */
 }
 .keyboard-hiragana .key:active {
-    background-color: #4a4545;
+    background-color: #85475c;
 }
 .keyboard-hiragana .key.functional,
 .keyboard-hiragana .key.btn-nav,
 .keyboard-hiragana .key.btn-enter,
 .keyboard-hiragana .key.btn-enter-bs,
 .keyboard-hiragana .key.btn-bs {
+    color: #dedede;
+}
+
+.keyboard-katakana .key {
+    background-color: #5c3000; /* さらに彩度を高めた暗いイエローブラウン */
+    color: #dedede;
+}
+.keyboard-katakana .key:active {
+    background-color: #7d4200;
+}
+.keyboard-katakana .key.functional,
+.keyboard-katakana .key.btn-nav,
+.keyboard-katakana .key.btn-enter,
+.keyboard-katakana .key.btn-enter-bs,
+.keyboard-katakana .key.btn-bs {
     color: #dedede;
 }
 
@@ -477,7 +495,7 @@ body {
     font-size: 6.6cqw; /* 大文字キーと同等サイズに比率化 */
     font-weight: bold;
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.6);
-    border: 0.35cqw solid rgba(255, 255, 255, 0.4); /* ボーダー幅も比率化 */
+    border: 0.35cqw solid #e6730f; /* 輪郭をSwitchキーと同じオレンジに変更 */
     transition: transform 0.1s, border-color 0.1s, box-shadow 0.1s;
 }
 
