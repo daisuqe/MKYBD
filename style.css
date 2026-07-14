@@ -49,24 +49,26 @@ body {
 
 .display-area {
     font-size: 20px;
-    font-weight: bold;
-    line-height: 1.4;
+    font-weight: normal; /* 太字を解除 */
+    line-height: 1.4; /* 元の行間に復元 */
     word-break: break-all;
     white-space: pre-wrap;
+    letter-spacing: 0.12em; /* 文字間隔を0.12emに調整 */
 }
 
 /* 表示エリアの各行 */
 .display-line {
-    min-height: 28px;
+    min-height: 28px; /* 元の高さに復元 */
     display: flex;
     align-items: center;
     position: relative;
     padding: 0 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06); /* 大学ノート風のうっすらした罫線 */
 }
 
 /* 表示エリアの行背景（偶数・奇数の区別用） */
 .display-line.active {
-    background-color: rgba(255, 255, 255, 0.03);
+    background-color: transparent;
 }
 
 /* カーソル */
@@ -109,11 +111,13 @@ body {
 /* キー本体 */
 .key {
     aspect-ratio: 1 / 1;
+    width: 100%;
+    height: 100%;
+    max-height: 76px; /* キー自体の物理的な膨張・はみ出しを防ぐ */
     background-color: #424242; /* defaultKeyColor */
     border-radius: 14px; /* KEY_RAD */
     border: none;
     color: #dedede;
-    font-size: 24px;
     font-weight: bold;
     display: flex;
     justify-content: center;
@@ -122,6 +126,8 @@ body {
     transition: background-color 0.1s, transform 0.05s;
     position: relative;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    overflow: hidden; /* フォントの高さによるキー拡張を防止 */
+    touch-action: none; /* スクロールキャンセルを防ぎフリックを安定化 */
 }
 
 .key:active {
@@ -129,8 +135,37 @@ body {
     transform: scale(0.95);
 }
 
-.key.functional {
-    font-size: 16px;
+/* 文字数・ケースに応じたフォントサイズ定義 */
+.key.char-len-1-lower {
+    font-size: 70px; /* キー高（76px）にきれいに収まる最大サイズ */
+    line-height: 1;
+}
+
+/* qypjg 用のディセンダ補正（上に引き上げる） */
+.key.char-len-1-lower.descender-key {
+    padding-bottom: 12px;
+}
+
+.key.char-len-1-upper,
+.key.char-len-1-default {
+    font-size: 56px; /* 大文字は最大56px（キー高の約7.5割） */
+    line-height: 1;
+}
+
+.key.char-len-2 {
+    font-size: 44px; /* BS等。極限サイズ */
+}
+
+.key.char-len-3 {
+    font-size: 34px; /* Tab, Ins等。極限サイズ */
+}
+
+.key.char-len-4 {
+    font-size: 27px; /* Menu等。極限サイズ */
+}
+
+.key.char-len-5 {
+    font-size: 24px; /* Enter, Space等。キーの横幅いっぱい */
 }
 
 /* キーボードモードごとのカラー設定 */
@@ -214,8 +249,9 @@ body {
 
 /* Switchキーのテキスト改行 */
 .key.btn-switch {
-    line-height: 1.1;
-    font-size: 14px;
+    line-height: 1.05;
+    font-size: 36px; /* さらに拡大 */
+    font-weight: bold;
 }
 
 /* フリックガイド (インジケーター) */
@@ -226,7 +262,7 @@ body {
     width: 100%;
     height: 100%;
     pointer-events: none;
-    z-index: 100;
+    z-index: 600; /* ドラッグガイド(500)より手前に表示するよう変更 */
     display: none;
 }
 
@@ -235,7 +271,7 @@ body {
     width: 30px;
     height: 30px;
     color: #dedede;
-    font-size: 24px;
+    font-size: 32px; /* 32px に拡大 */
     font-weight: bold;
     display: flex;
     justify-content: center;
@@ -384,4 +420,37 @@ body {
         border-radius: 0;
         border: none;
     }
+}
+
+/* ドラッグガイドボタンのスタイル */
+.drag-guide-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 500;
+    display: none;
+}
+
+.drag-guide-key {
+    position: absolute;
+    border-radius: 14px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #dedede;
+    font-size: 56px; /* 大文字キーと同等サイズ */
+    font-weight: bold;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.6);
+    border: 3px solid rgba(255, 255, 255, 0.4);
+    transition: transform 0.1s, border-color 0.1s, box-shadow 0.1s;
+}
+
+/* ドラッグ中のホバー強調表示 */
+.drag-guide-key.active {
+    transform: scale(1.1);
+    border-color: #ffffff;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 6px 15px rgba(0, 0, 0, 0.6);
 }

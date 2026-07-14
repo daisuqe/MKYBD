@@ -43,12 +43,12 @@ const keysUpper = [
 
 const keysNumber = [
     ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
-    ["=", "^", "¥", "@", "[", "]", "Tab", "Ins", "BS", "Enter"],
+    ["=", "^", "¥", "@", "(", ")", "Tab", "Ins", "BS", "Enter"],
     ["Switch", ";", ":", ",", "+", "-", "*", "/", ".", "Space"]
 ];
 
 const keysSymbol = [
-    ["!", "\"", "#", "$", "%", "&", "'", "(", ")", "Menu"],
+    ["!", "\"", "#", "$", "%", "&", "'", "[", "]", "Menu"],
     ["=", "~", "|", "`", "{", "}", "", "↑", "BS", "Enter"],
     ["Switch", "<", ">", "?", "_", "\\", "←", "↓", "→", "Space"]
 ];
@@ -183,47 +183,84 @@ function buildKeyboard() {
         const rowDiv = document.createElement('div');
         rowDiv.className = 'keyboard-row';
 
-        row.forEach(keyText => {
+        row.forEach((keyText, colIdx) => {
             const button = document.createElement('button');
             button.className = 'key';
+            button.setAttribute('data-row', rowIdx);
+            button.setAttribute('data-col', colIdx);
+            
+            let displayLength = 1;
+            let actualText = keyText;
             
             // キー固有のクラス・スタイル設定
             if (keyText === "Enter") {
                 if (isTempShiftMode) {
+                    actualText = "BS";
                     button.textContent = "BS";
                     button.classList.add('functional', 'btn-enter-bs');
                 } else {
+                    actualText = "Enter";
                     button.textContent = "Enter";
                     button.classList.add('functional', 'btn-enter');
                 }
             } else if (keyText === "Switch") {
-                button.innerHTML = "A@<br>a 1";
+                actualText = "A&\na 1";
+                button.innerHTML = "A&<br>a 1";
                 button.classList.add('functional', 'btn-switch');
                 setupSwitchKeyEvents(button);
             } else if (keyText === "Space") {
+                actualText = "Space";
                 button.textContent = "Space";
                 button.classList.add('functional', 'btn-space');
             } else if (keyText === "BS") {
+                actualText = "BS";
                 button.textContent = "BS";
                 button.classList.add('functional', 'btn-bs');
             } else if (keyText === "Tab") {
+                actualText = "Tab";
                 button.textContent = "Tab";
                 button.classList.add('functional', 'btn-tab');
             } else if (keyText === "Ins") {
-                button.textContent = isInsertMode ? "Ins" : "Ovr";
+                actualText = isInsertMode ? "Ins" : "Ovr";
+                button.textContent = actualText;
                 button.classList.add('functional', 'btn-ins');
             } else if (["↑", "↓", "←", "→"].includes(keyText)) {
+                actualText = keyText;
                 button.textContent = keyText;
                 button.classList.add('btn-nav');
             } else if (keyText === "Menu") {
+                actualText = "Menu";
                 button.textContent = "Menu";
                 button.classList.add('functional', 'btn-menu');
             } else {
+                actualText = keyText;
                 button.textContent = keyText;
                 // 数字キーボード内の数字と特定の記号に青色を設定
                 if (currentMode === KeyboardMode.Number && "0123456789./*-+".includes(keyText)) {
                     button.classList.add('blue-number');
                 }
+            }
+
+            // 文字数に応じたクラス付与
+            displayLength = actualText.length;
+            if (keyText === "Switch") {
+                displayLength = 3; // "A@\na 1" は最大3文字
+            }
+
+            if (displayLength === 1) {
+                if (isTempShiftMode || currentMode === KeyboardMode.Upper) {
+                    button.classList.add('char-len-1-upper');
+                } else if (currentMode === KeyboardMode.Lower) {
+                    button.classList.add('char-len-1-lower');
+                    // qypjg は下はみ出しを防ぐためクラス追加
+                    if ("qypjg".includes(actualText)) {
+                        button.classList.add('descender-key');
+                    }
+                } else {
+                    button.classList.add('char-len-1-default');
+                }
+            } else {
+                button.classList.add(`char-len-${displayLength}`);
             }
 
             // Switchキー以外の通常キーのクリック処理
@@ -379,12 +416,96 @@ function moveCursor(dx, dy) {
 
 // ─── Switchキー用のフリック＆ホールドイベント処理 ───
 let switchTouchStart = null;
-let switchHoldTimer = null;
 let isFlickTriggered = false;
 let flickIndicators = null;
+let switchPointerId = null;
+let dragGuideContainer = null;
+let activeGuideMode = null;
+
+// 特定のキーの矩形範囲を取得するヘルパー
+function getTargetKeyRect(row, col) {
+    const keyEl = document.querySelector(`.key[data-row="${row}"][data-col="${col}"]`);
+    if (keyEl) {
+        return keyEl.getBoundingClientRect();
+    }
+    return null;
+}
+
+// a, s, z キーの上にドラッグガイド (A, @, 1) を表示する
+function showDragGuides() {
+    if (!dragGuideContainer) {
+        dragGuideContainer = document.createElement('div');
+        dragGuideContainer.className = 'drag-guide-container';
+        dragGuideContainer.innerHTML = `
+            <div class="drag-guide-key" id="guideA" style="background-color: #424242;">A</div>
+            <div class="drag-guide-key" id="guideAt" style="background-color: #4a4a4a;">&</div>
+            <div class="drag-guide-key" id="guideOne" style="background-color: #11353c;">1</div>
+        `;
+        document.body.appendChild(dragGuideContainer);
+    }
+    
+    // a = row 1, col 0
+    // s = row 1, col 1
+    // z = row 2, col 1
+    const rectA = getTargetKeyRect(1, 0);
+    const rectS = getTargetKeyRect(1, 1);
+    const rectZ = getTargetKeyRect(2, 1);
+
+    if (rectA && rectS && rectZ) {
+        const guideA = document.getElementById('guideA');
+        const guideAt = document.getElementById('guideAt');
+        const guideOne = document.getElementById('guideOne');
+
+        guideA.style.left = `${rectA.left}px`;
+        guideA.style.top = `${rectA.top}px`;
+        guideA.style.width = `${rectA.width}px`;
+        guideA.style.height = `${rectA.height}px`;
+
+        guideAt.style.left = `${rectS.left}px`;
+        guideAt.style.top = `${rectS.top}px`;
+        guideAt.style.width = `${rectS.width}px`;
+        guideAt.style.height = `${rectS.height}px`;
+
+        guideOne.style.left = `${rectZ.left}px`;
+        guideOne.style.top = `${rectZ.top}px`;
+        guideOne.style.width = `${rectZ.width}px`;
+        guideOne.style.height = `${rectZ.height}px`;
+
+        dragGuideContainer.style.display = 'block';
+    }
+}
+
+function hideDragGuides() {
+    if (dragGuideContainer) {
+        dragGuideContainer.style.display = 'none';
+        document.getElementById('guideA').classList.remove('active');
+        document.getElementById('guideAt').classList.remove('active');
+        document.getElementById('guideOne').classList.remove('active');
+    }
+}
+
+// 座標から現在ポインターがどのガイドキーの上にあるか取得
+function getActiveGuideAtPoint(x, y) {
+    if (!dragGuideContainer || dragGuideContainer.style.display === 'none') return null;
+
+    const guides = [
+        { id: 'guideA', mode: KeyboardMode.Upper },
+        { id: 'guideAt', mode: KeyboardMode.Symbol },
+        { id: 'guideOne', mode: KeyboardMode.Number }
+    ];
+
+    for (const guide of guides) {
+        const el = document.getElementById(guide.id);
+        const rect = el.getBoundingClientRect();
+        if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+            return guide;
+        }
+    }
+    return null;
+}
 
 function setupSwitchKeyEvents(btn) {
-    // フリックガイドインジケーターの作成 (ボタン直下の絶対配置用)
+    // フリックガイドインジケーターの作成 (矢印用)
     if (!flickIndicators) {
         flickIndicators = document.createElement('div');
         flickIndicators.className = 'flick-indicators';
@@ -398,32 +519,35 @@ function setupSwitchKeyEvents(btn) {
 
     const startHandler = (e) => {
         e.preventDefault();
-        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        switchPointerId = e.pointerId;
 
-        switchTouchStart = { x: clientX, y: clientY };
+        switchTouchStart = { x: e.clientX, y: e.clientY };
         isFlickTriggered = false;
 
-        // 長押し(ホールド)検出タイマー (300ms)
-        switchHoldTimer = setTimeout(() => {
-            if (!isFlickTriggered) {
-                isTempShiftMode = true;
-                buildKeyboard();
-            }
-        }, 300);
+        // 押した瞬間に小文字モードなら一時大文字(Shift)化する
+        if (currentMode === KeyboardMode.Lower) {
+            isTempShiftMode = true;
+            buildKeyboard();
+        }
 
-        // ガイドインジケーターの位置設定と表示
-        const rect = btn.getBoundingClientRect();
+        // 矢印インジケーター表示
+        const activeBtn = document.querySelector('.btn-switch') || btn;
+        const rect = activeBtn.getBoundingClientRect();
+        const container = document.querySelector('.app-container') || document.body;
+        const containerRect = container.getBoundingClientRect();
+
+        if (flickIndicators.parentNode !== container) {
+            container.appendChild(flickIndicators);
+        }
+
         const size = rect.width;
         
-        flickIndicators.style.left = `${rect.left}px`;
-        flickIndicators.style.top = `${rect.top}px`;
+        flickIndicators.style.left = `${rect.left - containerRect.left}px`;
+        flickIndicators.style.top = `${rect.top - containerRect.top}px`;
         flickIndicators.style.width = `${size}px`;
         flickIndicators.style.height = `${size}px`;
         flickIndicators.style.display = 'block';
 
-        // ガイドの位置調整（Switchキーからの相対位置。Aの上、@の右上、1の右）
-        // CSSトランスフォームで回転
         const indUp = document.getElementById('indUp');
         const indUpRight = document.getElementById('indUpRight');
         const indRight = document.getElementById('indRight');
@@ -432,7 +556,6 @@ function setupSwitchKeyEvents(btn) {
         indUpRight.style.transform = `translate(${size * 0.55}px, -${size * 0.55}px) rotate(45deg)`;
         indRight.style.transform = `translate(${size * 0.7}px, 0px) rotate(90deg)`;
 
-        // 各インジケーターの基準配置
         [indUp, indUpRight, indRight].forEach(ind => {
             ind.style.left = `${(size - 30) / 2}px`;
             ind.style.top = `${(size - 30) / 2}px`;
@@ -441,26 +564,44 @@ function setupSwitchKeyEvents(btn) {
     };
 
     const moveHandler = (e) => {
+        if (switchPointerId === null || e.pointerId !== switchPointerId) return;
         if (!switchTouchStart) return;
 
-        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-
-        const deltaX = clientX - switchTouchStart.x;
-        const deltaY = clientY - switchTouchStart.y;
+        const deltaX = e.clientX - switchTouchStart.x;
+        const deltaY = e.clientY - switchTouchStart.y;
         const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
         if (distance > 30) {
-            isFlickTriggered = true;
-            clearTimeout(switchHoldTimer);
+            // オレンジのキーの外に30px以上はみ出た場合 ➔ フリック状態
+            if (!isFlickTriggered) {
+                isFlickTriggered = true;
 
-            // フリックによる一時シフト解除
-            if (isTempShiftMode) {
-                isTempShiftMode = false;
-                buildKeyboard();
+                // 一時大文字(Shift)解除して、背景キーボードを小文字に戻す
+                if (isTempShiftMode) {
+                    isTempShiftMode = false;
+                    buildKeyboard();
+                }
+
+                // a, s, z の位置に A, @, 1 のフリックボタン（ドラッグガイド）を表示
+                showDragGuides();
             }
 
-            // 角度判定 (上をプラス、右をプラスにするため Y を反転)
+            // 現在ポインターが重なっているガイドボタンの強調と記憶
+            const guide = getActiveGuideAtPoint(e.clientX, e.clientY);
+            activeGuideMode = guide ? guide.mode : null; // ドラッグ中の状態を記憶
+            const guideA = document.getElementById('guideA');
+            const guideAt = document.getElementById('guideAt');
+            const guideOne = document.getElementById('guideOne');
+            if (guideA && guideAt && guideOne) {
+                guideA.classList.remove('active');
+                guideAt.classList.remove('active');
+                guideOne.classList.remove('active');
+                if (guide) {
+                    document.getElementById(guide.id).classList.add('active');
+                }
+            }
+
+            // 矢印方向ガイドの強調 (角度で簡易判定)
             const ux = deltaX;
             const uy = -deltaY;
             const angle = Math.atan2(uy, ux) * 180 / Math.PI;
@@ -469,58 +610,72 @@ function setupSwitchKeyEvents(btn) {
             const indUpRight = document.getElementById('indUpRight');
             const indRight = document.getElementById('indRight');
 
-            // フィードバック色リセット
             indUp.style.color = '#dedede';
             indUpRight.style.color = '#dedede';
             indRight.style.color = '#dedede';
 
             if (angle >= 67.5 && angle < 112.5) {
-                // 上フリック: 大文字
                 indUp.style.color = '#e6730f';
             } else if (angle >= 22.5 && angle < 67.5) {
-                // 右上フリック: 記号
                 indUpRight.style.color = '#e6730f';
             } else if (angle >= -22.5 && angle < 22.5) {
-                // 右フリック: 数字
                 indRight.style.color = '#e6730f';
+            }
+        } else {
+            // オレンジのキーの中にいる場合（距離30px以内 ➔ パカパカ切り替えを防ぐ）
+            if (isFlickTriggered) {
+                isFlickTriggered = false;
+                hideDragGuides();
+            }
+            activeGuideMode = null;
+            
+            // 再び一時大文字化
+            if (!isTempShiftMode && currentMode === KeyboardMode.Lower) {
+                isTempShiftMode = true;
+                buildKeyboard();
+            }
+            
+            // 矢印インジケーターをリセット
+            const indUp = document.getElementById('indUp');
+            const indUpRight = document.getElementById('indUpRight');
+            const indRight = document.getElementById('indRight');
+            if (indUp && indUpRight && indRight) {
+                indUp.style.color = '#dedede';
+                indUpRight.style.color = '#dedede';
+                indRight.style.color = '#dedede';
             }
         }
     };
 
     const endHandler = (e) => {
-        if (!switchTouchStart) return;
+        if (switchPointerId === null || e.pointerId !== switchPointerId) return;
+        switchPointerId = null;
 
-        clearTimeout(switchHoldTimer);
         flickIndicators.style.display = 'none';
+        hideDragGuides();
 
-        const clientX = e.clientX || (e.changedTouches && e.changedTouches[0].clientX);
-        const clientY = e.clientY || (e.changedTouches && e.changedTouches[0].clientY);
+        if (!switchTouchStart) {
+            activeGuideMode = null;
+            isFlickTriggered = false;
+            return;
+        }
 
-        const deltaX = clientX - switchTouchStart.x;
-        const deltaY = clientY - switchTouchStart.y;
-        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-        if (distance > 30) {
-            // フリック完了によるモード遷移
-            const ux = deltaX;
-            const uy = -deltaY;
-            const angle = Math.atan2(uy, ux) * 180 / Math.PI;
-
-            if (angle >= 67.5 && angle < 112.5) {
-                setKeyboardMode(KeyboardMode.Upper);
-            } else if (angle >= 22.5 && angle < 67.5) {
-                setKeyboardMode(KeyboardMode.Symbol);
-            } else if (angle >= -22.5 && angle < 22.5) {
-                setKeyboardMode(KeyboardMode.Number);
+        if (isFlickTriggered) {
+            // pointermove中に記憶したドラッグガイドのモードで切り替える
+            if (activeGuideMode) {
+                setKeyboardMode(activeGuideMode);
+            } else {
+                // ガイド以外の場所で離された場合は切り替えない。一時シフトしていた場合は解除
+                isTempShiftMode = false;
+                buildKeyboard();
             }
         } else {
-            // 通常タップ判定
+            // タップまたははみ出なかった場合
             if (isTempShiftMode) {
-                // ホールド終了による小文字戻り
                 isTempShiftMode = false;
-                setKeyboardMode(KeyboardMode.Lower);
+                buildKeyboard();
             } else {
-                // 通常切り替えキー単体タップ: 小文字に戻る
+                // 小文字キーボード以外でタップした場合は小文字に戻る
                 if (currentMode !== KeyboardMode.Lower) {
                     setKeyboardMode(KeyboardMode.Lower);
                 }
@@ -528,11 +683,14 @@ function setupSwitchKeyEvents(btn) {
         }
 
         switchTouchStart = null;
+        activeGuideMode = null;
+        isFlickTriggered = false;
     };
 
     btn.addEventListener('pointerdown', startHandler);
     window.addEventListener('pointermove', moveHandler);
     window.addEventListener('pointerup', endHandler);
+    window.addEventListener('pointercancel', endHandler);
 }
 
 function setKeyboardMode(mode) {
