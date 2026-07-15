@@ -29,6 +29,10 @@ let selectedJournalKey = null;
 let pendingDeleteKey = null;
 let confirmAction = null; // "clear" または "delete"
 
+// 長押しリピート用変数
+let repeatTimer = null;
+let repeatInterval = null;
+
 const romajiMap = {
     "a": "あ", "i": "い", "u": "う", "e": "え", "o": "お",
     "ka": "か", "ki": "き", "ku": "く", "ke": "け", "ko": "こ",
@@ -406,7 +410,14 @@ function buildKeyboard() {
                         triggerKey = "BS";
                     }
                     handleKeyInput(triggerKey);
+                    // Switch・Menu・Ins以外は長押し1秒後にリピート開始
+                    if (keyText !== "Menu" && keyText !== "Ins") {
+                        startRepeat(triggerKey);
+                    }
                 });
+                button.addEventListener('pointerup', stopRepeat);
+                button.addEventListener('pointercancel', stopRepeat);
+                button.addEventListener('pointerleave', stopRepeat);
             }
 
             rowDiv.appendChild(button);
@@ -755,6 +766,27 @@ function moveCursor(dx, dy) {
     }
 
     renderDisplay();
+}
+
+// ─── 長押しリピート処理 ───
+function startRepeat(key) {
+    stopRepeat();
+    repeatTimer = setTimeout(() => {
+        repeatInterval = setInterval(() => {
+            handleKeyInput(key);
+        }, 80); // リピート間隔 80ms
+    }, 1000); // 長押し判定 1秒
+}
+
+function stopRepeat() {
+    if (repeatTimer !== null) {
+        clearTimeout(repeatTimer);
+        repeatTimer = null;
+    }
+    if (repeatInterval !== null) {
+        clearInterval(repeatInterval);
+        repeatInterval = null;
+    }
 }
 
 // ─── Switchキー用のフリック＆ホールドイベント処理 ───
