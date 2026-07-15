@@ -594,6 +594,8 @@ body {
         height: 100vh;
         border-radius: 0;
         border: none;
+        /* 下の隙間をキー1個分に: (画面幅 - 左右padding20px - 9gap×6px) / 10列 × 縦横比 */
+        padding-bottom: calc((100vw - 74px) / 10 * clamp(1, 100vh / 100vw, 1.9));
     }
 
     /* キーを画面縦横比に合わせて縦長に（最大1:1.9でキャップ） */
