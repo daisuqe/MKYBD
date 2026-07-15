@@ -131,8 +131,9 @@ body {
     transition: background-color 0.1s, transform 0.05s;
     position: relative;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    overflow: hidden; /* フォントの高さによるキー拡張を防止 */
-    touch-action: none; /* スクロールキャンセルを防ぎフリックを安定化 */
+    overflow: hidden;
+    touch-action: none;
+    white-space: nowrap;
 }
 
 .key:active {
@@ -247,6 +248,7 @@ body {
 /* 特殊キーカラー */
 .key.btn-enter {
     background-color: #0d5e17 !important; /* enterKeyColor */
+    font-size: 3.22cqw !important;
 }
 .key.btn-enter:active {
     background-color: #bfbfbf !important;
@@ -254,6 +256,7 @@ body {
 
 .key.btn-enter-bs {
     background-color: #762216 !important; /* bsKeyColor */
+    font-size: 6.24cqw !important;
 }
 .key.btn-enter-bs:active {
     background-color: #bfbfbf !important;
@@ -261,6 +264,7 @@ body {
 
 .key.btn-bs {
     background-color: #762216 !important; /* bsKeyColor */
+    font-size: 6.24cqw !important;
 }
 .key.btn-bs:active {
     background-color: #bfbfbf !important;
@@ -293,9 +297,18 @@ body {
 
 .key.btn-space {
     background-color: #6b6b6b !important; /* spaceKeyColor */
+    font-size: 3.0cqw !important;
 }
 .key.btn-space:active {
     background-color: #bfbfbf !important;
+}
+
+.key.btn-yellow {
+    background-color: #d9a300 !important;
+    font-size: 6.4cqw !important;
+}
+.key.btn-yellow:active {
+    background-color: #ffc400 !important;
 }
 
 /* Switchキーのテキスト改行 */
@@ -495,7 +508,7 @@ body {
     font-size: 6.6cqw; /* 大文字キーと同等サイズに比率化 */
     font-weight: bold;
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.6);
-    border: 0.35cqw solid #e6730f; /* 輪郭をSwitchキーと同じオレンジに変更 */
+    border: 0.68cqw solid #e6730f; /* 輪郭をSwitchキーと同じオレンジに変更 (適度な太さに調整) */
     transition: transform 0.1s, border-color 0.1s, box-shadow 0.1s;
 }
 
@@ -504,4 +517,62 @@ body {
     transform: scale(1.1);
     border-color: #ffffff;
     box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 6px 15px rgba(0, 0, 0, 0.6);
+}
+
+/* 変換候補バー */
+.candidate-bar {
+    width: 100%;
+    height: 44px;
+    background-color: #0d0d0d;
+    border-bottom: 1px solid #1a1a1a;
+    display: none;
+    align-items: center;
+    flex-wrap: nowrap !important;
+    flex-direction: row !important;
+    gap: 0px;
+    padding: 0;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+    box-sizing: border-box;
+}
+.candidate-bar::-webkit-scrollbar {
+    display: none;
+}
+
+.candidate-item {
+    display: inline-flex !important;
+    flex-shrink: 0 !important;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 0 16px;
+    background-color: #1a1a1a;
+    color: #dedede;
+    border: none;
+    border-right: 1px solid #2d2d2d;
+    border-radius: 0;
+    font-size: 13px !important;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+    user-select: none;
+    -webkit-user-select: none;
+    box-sizing: border-box;
+}
+.candidate-item.selected {
+    background-color: #e6730f;
+    color: #ffffff;
+}
+.candidate-item:active {
+    background-color: #ffa047;
+    color: #ffffff;
+}
+
+/* 未確定・変換中テキストの下線装飾 */
+.unconfirmed-text {
+    text-decoration: underline;
+    text-decoration-color: #e6730f;
+    text-underline-offset: 5px;
+    text-decoration-thickness: 2px;
 }

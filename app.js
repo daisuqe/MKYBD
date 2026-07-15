@@ -17,6 +17,12 @@ let scrollIndex = 0;
 let isInsertMode = true;
 let cursorVisible = true;
 let romajiBuffer = "";
+let hiraganaBuffer = "";
+let currentCandidates = [];
+let jsonpCounter = 0;
+let isConverting = false;
+let candidateIndex = 0;
+let lastInsertedLength = 0;
 
 const romajiMap = {
     "a": "あ", "i": "い", "u": "う", "e": "え", "o": "お",
@@ -68,6 +74,7 @@ const keyboardContainer = document.getElementById('keyboardContainer');
 const menuModal = document.getElementById('menuModal');
 const confirmModal = document.getElementById('confirmModal');
 
+const btnCopy = document.getElementById('btnCopy');
 const btnPaste = document.getElementById('btnPaste');
 const btnSave = document.getElementById('btnSave');
 const btnClear = document.getElementById('btnClear');
@@ -100,13 +107,13 @@ const keysSymbol = [
 ];
 
 const keysHiragana = [
-    ["ー", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+    ["▶", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
     ["A", "S", "D", "F", "H", "J", "G", "K", "L", "BS"],
     ["Switch", "Z", "、", "C", "V", "B", "N", "M", "。", "Enter"]
 ];
 
 const keysKatakana = [
-    ["ー", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+    ["▶", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
     ["A", "S", "D", "F", "H", "J", "G", "K", "L", "BS"],
     ["Switch", "Z", "、", "C", "V", "B", "N", "M", "。", "Enter"]
 ];
@@ -172,13 +179,29 @@ function renderDisplay() {
             const cIdx = Math.max(0, Math.min(charIndex, lineText.length));
             const left = lineText.substring(0, cIdx);
             
+            const H = Math.min(lastInsertedLength, left.length);
+            const confirmedLeft = left.substring(0, left.length - H);
+            const unconfirmedText = left.substring(left.length - H);
+
             const cursorSpan = document.createElement('span');
             cursorSpan.className = `cursor ${!isInsertMode ? 'overwrite' : ''}`;
             cursorSpan.style.visibility = cursorVisible ? 'visible' : 'hidden';
 
+            const appendLeftTexts = () => {
+                if (confirmedLeft) {
+                    contentSpan.appendChild(document.createTextNode(confirmedLeft));
+                }
+                if (unconfirmedText) {
+                    const uSpan = document.createElement('span');
+                    uSpan.className = 'unconfirmed-text';
+                    uSpan.textContent = unconfirmedText;
+                    contentSpan.appendChild(uSpan);
+                }
+            };
+
             if (isInsertMode) {
                 const right = lineText.substring(cIdx);
-                contentSpan.appendChild(document.createTextNode(left));
+                appendLeftTexts();
                 contentSpan.appendChild(cursorSpan);
                 contentSpan.appendChild(document.createTextNode(right));
             } else {
@@ -189,12 +212,12 @@ function renderDisplay() {
                     const uElement = document.createElement('u');
                     uElement.textContent = targetChar;
 
-                    contentSpan.appendChild(document.createTextNode(left));
+                    appendLeftTexts();
                     contentSpan.appendChild(cursorSpan); // 上書きモード時はカーソルを文字の前に表示
                     contentSpan.appendChild(uElement);
                     contentSpan.appendChild(document.createTextNode(right));
                 } else {
-                    contentSpan.appendChild(document.createTextNode(left));
+                    appendLeftTexts();
                     contentSpan.appendChild(cursorSpan);
                 }
             }
@@ -322,7 +345,13 @@ function buildKeyboard() {
                 button.classList.add('functional', 'btn-menu');
             } else {
                 actualText = keyText;
-                button.textContent = keyText;
+                if (keyText === "▶") {
+                    button.classList.add('functional', 'btn-yellow');
+                } else if (isConverting && keyText === "。") {
+                    actualText = "◀";
+                    button.classList.add('functional', 'btn-yellow');
+                }
+                button.textContent = actualText;
                 // 数字キーボード内の数字と特定の記号に青色を設定
                 if (currentMode === KeyboardMode.Number && "0123456789./*-+".includes(keyText)) {
                     button.classList.add('blue-number');
@@ -356,6 +385,9 @@ function buildKeyboard() {
                 button.addEventListener('pointerdown', (e) => {
                     e.preventDefault();
                     let triggerKey = keyText;
+                    if (isConverting && keyText === "。") {
+                        triggerKey = "◀";
+                    }
                     if (keyText === "Enter" && isTempShiftMode) {
                         triggerKey = "BS";
                     }
@@ -376,37 +408,71 @@ function handleKeyInput(key) {
 
     if (key === "Tab") {
         flushRomajiBuffer();
+        clearHiraganaBuffer();
         insertText("    ");
     } else if (key === "Ins") {
         flushRomajiBuffer();
+        clearHiraganaBuffer();
         isInsertMode = !isInsertMode;
         buildKeyboard();
         renderDisplay();
     } else if (key === "BS") {
-        if (currentMode === KeyboardMode.Hiragana && romajiBuffer.length > 0) {
-            romajiBuffer = romajiBuffer.slice(0, -1);
+        if (isConverting) {
+            replaceInlineText(hiraganaBuffer);
+            isConverting = false;
+            closeCandidateBar();
+            renderDisplay();
+        } else {
+            if ((currentMode === KeyboardMode.Hiragana || currentMode === KeyboardMode.Katakana) && romajiBuffer.length > 0) {
+                romajiBuffer = romajiBuffer.slice(0, -1);
+            } else if ((currentMode === KeyboardMode.Hiragana || currentMode === KeyboardMode.Katakana) && hiraganaBuffer.length > 0) {
+                hiraganaBuffer = hiraganaBuffer.slice(0, -1);
+            }
+            lastInsertedLength = hiraganaBuffer.length + romajiBuffer.length;
+            closeCandidateBar();
+            deleteChar();
         }
-        deleteChar();
+    } else if (key === "▶") {
+        startGoogleConversion();
+    } else if (key === "◀") {
+        if (isConverting && currentCandidates.length > 0) {
+            candidateIndex = (candidateIndex - 1 + currentCandidates.length) % currentCandidates.length;
+            const prevWord = currentCandidates[candidateIndex];
+            replaceInlineText(prevWord);
+            renderDisplay();
+            updateSelectedCandidateUI();
+        }
     } else if (key === "Menu") {
         flushRomajiBuffer();
+        clearHiraganaBuffer();
         openMenu();
     } else if (key === "Enter") {
         flushRomajiBuffer();
-        onEnterPressed();
+        if (hiraganaBuffer.length > 0) {
+            clearHiraganaBuffer();
+            renderDisplay();
+        } else {
+            onEnterPressed();
+        }
     } else if (key === "←") {
         flushRomajiBuffer();
+        clearHiraganaBuffer();
         moveCursor(-1, 0);
     } else if (key === "→") {
         flushRomajiBuffer();
+        clearHiraganaBuffer();
         moveCursor(1, 0);
     } else if (key === "↑") {
         flushRomajiBuffer();
+        clearHiraganaBuffer();
         moveCursor(0, -1);
     } else if (key === "↓") {
         flushRomajiBuffer();
+        clearHiraganaBuffer();
         moveCursor(0, 1);
     } else if (key === "Space") {
         flushRomajiBuffer();
+        clearHiraganaBuffer();
         insertText(" ");
     } else {
         // 通常の文字入力
@@ -421,21 +487,30 @@ function handleKeyInput(key) {
                 char = key.toLowerCase();
             }
             clearRomajiBuffer();
+            clearHiraganaBuffer();
             insertText(char);
         }
     }
 }
 
 function handleHiraganaInput(char) {
+    if (isConverting) {
+        clearHiraganaBuffer();
+    }
+
     if (!/^[a-z]$/.test(char)) {
         flushRomajiBuffer();
         insertText(char);
+        hiraganaBuffer += char;
+        lastInsertedLength = hiraganaBuffer.length;
         return;
     }
 
     romajiBuffer += char;
     insertText(char);
     checkAndConvertRomaji();
+    lastInsertedLength = hiraganaBuffer.length + romajiBuffer.length;
+    renderDisplay();
 }
 
 function checkAndConvertRomaji() {
@@ -484,15 +559,23 @@ function checkAndConvertRomaji() {
 }
 
 function handleKatakanaInput(char) {
+    if (isConverting) {
+        clearHiraganaBuffer();
+    }
+
     if (!/^[a-z]$/.test(char)) {
         flushRomajiBuffer();
         insertText(char);
+        hiraganaBuffer += char;
+        lastInsertedLength = hiraganaBuffer.length;
         return;
     }
 
     romajiBuffer += char;
     insertText(char);
     checkAndConvertRomaji();
+    lastInsertedLength = hiraganaBuffer.length + romajiBuffer.length;
+    renderDisplay();
 }
 
 function hiraToKata(str) {
@@ -511,7 +594,16 @@ function replaceLastChars(count, replacement) {
         text = hiraToKata(replacement);
     }
     insertTextWithoutRender(text);
-    renderDisplay();
+    
+    // hiraganaBufferの更新（ローマ字変換結果のひらがな/カタカナを蓄積）
+    const kanaOnly = replacement.replace(/[a-z]/gi, '');
+    if (kanaOnly) {
+        if (currentMode === KeyboardMode.Katakana) {
+            hiraganaBuffer += hiraToKata(kanaOnly);
+        } else {
+            hiraganaBuffer += kanaOnly;
+        }
+    }
 }
 
 function deleteCharWithoutRender() {
@@ -951,7 +1043,9 @@ function setupSwitchKeyEvents(btn) {
 function setKeyboardMode(mode) {
     currentMode = mode;
     isTempShiftMode = false;
+    clearHiraganaBuffer();
     buildKeyboard();
+    renderDisplay();
 }
 
 // ─── 表示エリアのクリックによるカーソル移動 ───
@@ -1002,12 +1096,27 @@ function setupEventListeners() {
     });
 
     // メニューボタンイベント
+    btnCopy.addEventListener('click', () => {
+        closeMenu();
+        const fullText = lines.join('\n');
+        navigator.clipboard.writeText(fullText).then(() => {
+            alert("クリップボードにテキストをコピーしました");
+        }).catch(err => {
+            console.error('Clipboard copy failed:', err);
+        });
+    });
+
     btnPaste.addEventListener('click', () => {
         closeMenu();
         navigator.clipboard.readText().then(clip => {
-            if (clip) insertText(clip);
+            if (clip && clip.trim().length > 0) {
+                insertText(clip);
+            } else {
+                alert("クリップボードにテキストがありません");
+            }
         }).catch(err => {
             console.error('Clipboard paste failed:', err);
+            alert("クリップボードにテキストがありません");
         });
     });
 
@@ -1032,7 +1141,7 @@ function setupEventListeners() {
     });
 
     btnYes.addEventListener('click', () => {
-        confirmModal.classList.remove('active');
+            confirmModal.classList.remove('active');
         lines = [""];
         lineIndex = 0;
         charIndex = 0;
@@ -1048,19 +1157,12 @@ function setupEventListeners() {
 
 // ─── メニュー開閉と活性制御 ───
 function openMenu() {
-    // 各機能の活性・非活性状態の更新
-    // Paste
-    navigator.clipboard.readText().then(clip => {
-        const hasClipboard = !!clip;
-        btnPaste.disabled = !hasClipboard;
-    }).catch(() => {
-        btnPaste.disabled = true; // クリップボード権限が無い場合などは非活性
-    });
-
-    // Save & Clear
+    // Save & Clear & Copy
     const totalChars = lines.reduce((acc, cur) => acc + cur.length, 0);
     const hasText = totalChars > 0;
     
+    btnCopy.disabled = !hasText;
+    btnPaste.disabled = false; // Menuを開いた時点ではクリップボードにアクセスしない
     btnSave.disabled = !hasText;
     btnClear.disabled = !hasText;
 
@@ -1079,45 +1181,253 @@ function setupPhysicalKeyboard() {
             return;
         }
 
+        let mappedKey = null;
+
         if (e.key === "Backspace") {
-            e.preventDefault();
-            if (currentMode === KeyboardMode.Hiragana && romajiBuffer.length > 0) {
-                romajiBuffer = romajiBuffer.slice(0, -1);
-            }
-            deleteChar();
+            mappedKey = "BS";
         } else if (e.key === "Enter") {
-            e.preventDefault();
-            flushRomajiBuffer();
-            onEnterPressed();
+            mappedKey = "Enter";
         } else if (e.key === "Tab") {
-            e.preventDefault();
-            flushRomajiBuffer();
-            insertText("    ");
+            mappedKey = "Tab";
         } else if (e.key === "ArrowLeft") {
-            e.preventDefault();
-            flushRomajiBuffer();
-            moveCursor(-1, 0);
+            mappedKey = "←";
         } else if (e.key === "ArrowRight") {
-            e.preventDefault();
-            flushRomajiBuffer();
-            moveCursor(1, 0);
+            mappedKey = "→";
         } else if (e.key === "ArrowUp") {
-            e.preventDefault();
-            flushRomajiBuffer();
-            moveCursor(0, -1);
+            mappedKey = "↑";
         } else if (e.key === "ArrowDown") {
-            e.preventDefault();
-            flushRomajiBuffer();
-            moveCursor(0, 1);
+            mappedKey = "↓";
         } else if (e.key === "Insert") {
+            mappedKey = "Ins";
+        } else if (e.key === "-") {
+            if (currentMode === KeyboardMode.Hiragana || currentMode === KeyboardMode.Katakana) {
+                mappedKey = "▶";
+            }
+        } else if (e.key === ".") {
+            if (currentMode === KeyboardMode.Hiragana || currentMode === KeyboardMode.Katakana) {
+                mappedKey = isConverting ? "◀" : "。";
+            }
+        } else if (e.key === ",") {
+            if (currentMode === KeyboardMode.Hiragana || currentMode === KeyboardMode.Katakana) {
+                mappedKey = "、";
+            }
+        }
+
+        if (mappedKey !== null) {
             e.preventDefault();
-            flushRomajiBuffer();
-            isInsertMode = !isInsertMode;
-            buildKeyboard();
-            renderDisplay();
-        } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+            handleKeyInput(mappedKey);
+            return;
+        }
+
+        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
             e.preventDefault();
             handleKeyInput(e.key);
         }
     });
+}
+
+function clearHiraganaBuffer() {
+    hiraganaBuffer = "";
+    romajiBuffer = "";
+    lastInsertedLength = 0;
+    isConverting = false;
+    buildKeyboard();
+    closeCandidateBar();
+}
+
+function closeCandidateBar() {
+    const bar = document.getElementById('candidateBar');
+    if (bar) {
+        bar.innerHTML = "";
+        bar.style.display = 'none';
+    }
+    currentCandidates = [];
+    candidateIndex = 0;
+    if (isConverting) {
+        isConverting = false;
+        buildKeyboard();
+    }
+}
+
+function replaceInlineText(word) {
+    for (let i = 0; i < lastInsertedLength; i++) {
+        deleteCharWithoutRender();
+    }
+    insertTextWithoutRender(word);
+    lastInsertedLength = word.length;
+}
+
+function startGoogleConversion() {
+    flushRomajiBuffer();
+    
+    if (!hiraganaBuffer) {
+        return;
+    }
+    
+    if (isConverting) {
+        if (currentCandidates.length > 0) {
+            candidateIndex = (candidateIndex + 1) % currentCandidates.length;
+            const nextWord = currentCandidates[candidateIndex];
+            replaceInlineText(nextWord);
+            renderDisplay();
+            updateSelectedCandidateUI();
+        }
+        return;
+    }
+    
+    isConverting = true;
+    candidateIndex = 0;
+    lastInsertedLength = hiraganaBuffer.length;
+    buildKeyboard();
+    
+    const bar = document.getElementById('candidateBar');
+    if (bar) {
+        bar.style.display = 'flex';
+        bar.innerHTML = '<div style="color: #888; font-size: 14px; padding-left: 8px;">変換中...</div>';
+    }
+    
+    requestGoogleSuggest(hiraganaBuffer, function(data) {
+        showCandidates(data);
+    });
+}
+
+function requestGoogleSuggest(text, callback) {
+    const callbackName = 'google_translate_callback_' + (jsonpCounter++);
+    
+    const timeoutId = setTimeout(() => {
+        cleanup();
+        showCandidatesError();
+    }, 5000);
+
+    function cleanup() {
+        clearTimeout(timeoutId);
+        if (window[callbackName]) {
+            delete window[callbackName];
+        }
+        const script = document.getElementById(callbackName);
+        if (script && script.parentNode) {
+            script.parentNode.removeChild(script);
+        }
+    }
+
+    window[callbackName] = function(data) {
+        cleanup();
+        callback(data);
+    };
+
+    const script = document.createElement('script');
+    script.id = callbackName;
+    
+    script.onerror = function() {
+        cleanup();
+        showCandidatesError();
+    };
+
+    script.src = `https://www.google.com/transliterate?langpair=ja-Hira|ja&text=${encodeURIComponent(text)}&jsonp=${callbackName}`;
+    document.body.appendChild(script);
+}
+
+function showCandidatesError() {
+    const bar = document.getElementById('candidateBar');
+    if (bar) {
+        bar.style.display = 'flex';
+        bar.innerHTML = '<div style="color: #ff6b6b; font-size: 14px; padding-left: 12px; font-weight: bold;">変換エラー（接続を確認してください）</div>';
+    }
+    isConverting = false;
+}
+
+function showCandidates(data) {
+    const bar = document.getElementById('candidateBar');
+    if (!bar) return;
+    bar.innerHTML = "";
+    
+    if (!data || !Array.isArray(data) || data.length === 0) {
+        bar.style.display = 'none';
+        isConverting = false;
+        return;
+    }
+    
+    try {
+        const candidates = [];
+        let maxLen = 0;
+        data.forEach(segment => {
+            if (segment && Array.isArray(segment) && segment[1] && Array.isArray(segment[1])) {
+                if (segment[1].length > maxLen) {
+                    maxLen = segment[1].length;
+                }
+            }
+        });
+        
+        if (maxLen === 0) {
+            bar.style.display = 'none';
+            isConverting = false;
+            return;
+        }
+        
+        const maxCandidates = 8;
+        for (let i = 0; i < Math.min(maxLen, maxCandidates); i++) {
+            let combined = "";
+            data.forEach(segment => {
+                if (segment && Array.isArray(segment) && segment[1] && Array.isArray(segment[1])) {
+                    const list = segment[1];
+                    const cand = list[Math.min(i, list.length - 1)];
+                    combined += cand;
+                }
+            });
+            if (combined && !candidates.includes(combined)) {
+                candidates.push(combined);
+            }
+        }
+        
+        currentCandidates = candidates;
+        
+        if (candidates.length === 0) {
+            bar.style.display = 'none';
+            isConverting = false;
+            return;
+        }
+        
+        candidates.forEach((candText, idx) => {
+            const btn = document.createElement('div');
+            btn.className = `candidate-item ${idx === candidateIndex ? 'selected' : ''}`;
+            btn.textContent = candText;
+            btn.addEventListener('click', () => {
+                selectCandidate(candText);
+            });
+            bar.appendChild(btn);
+        });
+        
+        bar.style.display = 'flex';
+        
+        // 最初の候補を自動でインライン適用
+        replaceInlineText(candidates[0]);
+        renderDisplay();
+        
+    } catch (e) {
+        console.error(e);
+        showCandidatesError();
+    }
+}
+
+function updateSelectedCandidateUI() {
+    const bar = document.getElementById('candidateBar');
+    if (!bar) return;
+    const items = bar.querySelectorAll('.candidate-item');
+    items.forEach((item, idx) => {
+        if (idx === candidateIndex) {
+            item.classList.add('selected');
+            item.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        } else {
+            item.classList.remove('selected');
+        }
+    });
+}
+
+function selectCandidate(word) {
+    for (let i = 0; i < lastInsertedLength; i++) {
+        deleteCharWithoutRender();
+    }
+    insertTextWithoutRender(word);
+    clearHiraganaBuffer();
+    renderDisplay();
 }
