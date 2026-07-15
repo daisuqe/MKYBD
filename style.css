@@ -370,7 +370,7 @@ body {
 /* メニューダイアログ */
 .menu-dialog {
     width: 280px;
-    height: 260px;
+    height: 380px;
     background: rgba(24, 24, 24, 0.95);
     border: 1px solid #3a3a3a;
     border-radius: 14px;
@@ -382,11 +382,117 @@ body {
     backdrop-filter: blur(10px);
 }
 
+/* Popダイアログ */
+.pop-dialog {
+    width: calc(100% - 24px);
+    max-width: 580px;
+    height: 420px;
+    background: rgba(24, 24, 24, 0.95);
+    border: 1px solid #3a3a3a;
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    backdrop-filter: blur(10px);
+    box-sizing: border-box;
+}
+
+.pop-title {
+    font-size: 22px;
+    font-weight: bold;
+    color: #dedede;
+    margin-bottom: 15px;
+}
+
+.journal-list-container {
+    width: 100%;
+    flex: 1;
+    background: rgba(10, 10, 10, 0.5);
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    padding: 5px;
+    box-sizing: border-box;
+}
+
+.journal-item {
+    padding: 10px;
+    color: #ccc;
+    font-size: 15px;
+    border-bottom: 1px solid #202020;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s, color 0.2s;
+    user-select: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.journal-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+}
+
+.journal-item.selected {
+    background: rgba(230, 115, 15, 0.2);
+    color: #e6730f;
+    font-weight: bold;
+}
+
+.pop-buttons {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.pop-btn {
+    flex: 1;
+    height: 40px;
+    background-color: #404040;
+    color: #dedede;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.pop-btn:hover:not(:disabled) {
+    background-color: #505050;
+}
+
+.pop-btn#btnPopExecute {
+    background-color: #0d5e17;
+}
+.pop-btn#btnPopExecute:hover:not(:disabled) {
+    background-color: #147a21;
+}
+
+.pop-btn#btnPopDelete {
+    background-color: #762216;
+}
+.pop-btn#btnPopDelete:hover:not(:disabled) {
+    background-color: #9c2e1f;
+}
+
+.pop-btn:disabled, .pop-btn.disabled {
+    background-color: rgba(60, 60, 60, 0.4) !important;
+    color: rgba(222, 222, 222, 0.3) !important;
+    cursor: not-allowed;
+}
+
 .menu-title {
     font-size: 22px;
     font-weight: bold;
     color: #dedede;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     margin-top: 5px;
 }
 
@@ -394,7 +500,7 @@ body {
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 10px;
 }
 
 .menu-btn {

@@ -24,6 +24,11 @@ let isConverting = false;
 let candidateIndex = 0;
 let lastInsertedLength = 0;
 
+// Journal管理用変数
+let selectedJournalKey = null;
+let pendingDeleteKey = null;
+let confirmAction = null; // "clear" または "delete"
+
 const romajiMap = {
     "a": "あ", "i": "い", "u": "う", "e": "え", "o": "お",
     "ka": "か", "ki": "き", "ku": "く", "ke": "け", "ko": "こ",
@@ -76,10 +81,19 @@ const confirmModal = document.getElementById('confirmModal');
 
 const btnCopy = document.getElementById('btnCopy');
 const btnPaste = document.getElementById('btnPaste');
+const btnPush = document.getElementById('btnPush');
+const btnPop = document.getElementById('btnPop');
 const btnSave = document.getElementById('btnSave');
 const btnClear = document.getElementById('btnClear');
 const btnYes = document.getElementById('btnYes');
 const btnNo = document.getElementById('btnNo');
+
+// Pop用ダイアログ要素
+const popModal = document.getElementById('popModal');
+const journalList = document.getElementById('journalList');
+const btnPopExecute = document.getElementById('btnPopExecute');
+const btnPopExport = document.getElementById('btnPopExport');
+const btnPopDelete = document.getElementById('btnPopDelete');
 
 // キー定義
 const keysLower = [
@@ -1095,6 +1109,24 @@ function setupEventListeners() {
         if (e.target === confirmModal) confirmModal.classList.remove('active');
     });
 
+    // モーダルの外側クリックで閉じる処理
+    menuModal.addEventListener('click', (e) => {
+        if (e.target === menuModal) closeMenu();
+    });
+    
+    confirmModal.addEventListener('click', (e) => {
+        if (e.target === confirmModal) {
+            confirmModal.classList.remove('active');
+            confirmAction = null;
+            pendingDeleteKey = null;
+            document.getElementById('confirmTitle').textContent = "Clear all text?";
+        }
+    });
+
+    popModal.addEventListener('click', (e) => {
+        if (e.target === popModal) closePopModal();
+    });
+
     // メニューボタンイベント
     btnCopy.addEventListener('click', () => {
         closeMenu();
@@ -1120,6 +1152,16 @@ function setupEventListeners() {
         });
     });
 
+    btnPush.addEventListener('click', () => {
+        closeMenu();
+        pushJournal();
+    });
+
+    btnPop.addEventListener('click', () => {
+        closeMenu();
+        openPopModal();
+    });
+
     btnSave.addEventListener('click', () => {
         closeMenu();
         const fullText = lines.join('\n');
@@ -1137,32 +1179,237 @@ function setupEventListeners() {
 
     btnClear.addEventListener('click', () => {
         closeMenu();
+        confirmAction = "clear";
+        document.getElementById('confirmTitle').textContent = "Clear all text?";
         confirmModal.classList.add('active');
     });
 
     btnYes.addEventListener('click', () => {
-            confirmModal.classList.remove('active');
-        lines = [""];
-        lineIndex = 0;
-        charIndex = 0;
-        scrollIndex = 0;
-        saveToLocalStorage();
-        renderDisplay();
+        confirmModal.classList.remove('active');
+        if (confirmAction === "clear") {
+            lines = [""];
+            lineIndex = 0;
+            charIndex = 0;
+            scrollIndex = 0;
+            saveToLocalStorage();
+            renderDisplay();
+        } else if (confirmAction === "delete" && pendingDeleteKey) {
+            executeDeleteJournal(pendingDeleteKey);
+        }
+        confirmAction = null;
+        pendingDeleteKey = null;
+        document.getElementById('confirmTitle').textContent = "Clear all text?";
     });
 
     btnNo.addEventListener('click', () => {
         confirmModal.classList.remove('active');
+        confirmAction = null;
+        pendingDeleteKey = null;
+        document.getElementById('confirmTitle').textContent = "Clear all text?";
     });
+
+    // Popダイアログのボタンイベント
+    btnPopExecute.addEventListener('click', () => {
+        if (selectedJournalKey) {
+            popJournal(selectedJournalKey);
+            closePopModal();
+        }
+    });
+
+    btnPopExport.addEventListener('click', () => {
+        exportAllJournals();
+    });
+
+    btnPopDelete.addEventListener('click', () => {
+        if (selectedJournalKey) {
+            pendingDeleteKey = selectedJournalKey;
+            confirmAction = "delete";
+            document.getElementById('confirmTitle').textContent = `Delete "${selectedJournalKey}"?`;
+            confirmModal.classList.add('active');
+        }
+    });
+}
+
+// ─── Push/Pop用ヘルパー関数 ───
+function getYyMmDd() {
+    const d = new Date();
+    const yy = String(d.getFullYear()).slice(-2);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return yy + mm + dd;
+}
+
+function pushJournal() {
+    const fullText = lines.join('\n');
+    if (!fullText.trim()) return;
+
+    const dateStr = getYyMmDd();
+    let list = [];
+    try {
+        const savedList = localStorage.getItem("PushJournalList");
+        if (savedList) list = JSON.parse(savedList);
+    } catch(e) {
+        list = [];
+    }
+
+    let targetKey = dateStr;
+    if (list.includes(targetKey)) {
+        let index = 2;
+        while (list.includes(`${dateStr}_${index}`)) {
+            index++;
+        }
+        targetKey = `${dateStr}_${index}`;
+    }
+
+    localStorage.setItem("PushJournal_" + targetKey, fullText);
+    list.push(targetKey);
+    localStorage.setItem("PushJournalList", JSON.stringify(list));
+
+    alert(`日記を「${targetKey}」として保存しました`);
+}
+
+function openPopModal() {
+    selectedJournalKey = null;
+    btnPopExecute.disabled = true;
+    btnPopExecute.classList.add('disabled');
+    btnPopDelete.disabled = true;
+    btnPopDelete.classList.add('disabled');
+    
+    renderJournalList();
+    popModal.classList.add('active');
+}
+
+function closePopModal() {
+    popModal.classList.remove('active');
+}
+
+function renderJournalList() {
+    journalList.innerHTML = "";
+    let list = [];
+    try {
+        const savedList = localStorage.getItem("PushJournalList");
+        if (savedList) list = JSON.parse(savedList);
+    } catch(e) {
+        list = [];
+    }
+
+    if (list.length === 0) {
+        journalList.innerHTML = '<div style="color: #666; font-size: 14px; text-align: center; padding: 20px;">保存された日記はありません</div>';
+        return;
+    }
+
+    list.forEach(key => {
+        const item = document.createElement('div');
+        item.className = 'journal-item';
+        const content = localStorage.getItem("PushJournal_" + key) || "";
+        const cleanContent = content.replace(/\n/g, " ").trim();
+        item.textContent = `${key}  ${cleanContent}`;
+        item.addEventListener('click', () => {
+            const items = journalList.querySelectorAll('.journal-item');
+            items.forEach(el => el.classList.remove('selected'));
+            
+            if (selectedJournalKey === key) {
+                selectedJournalKey = null;
+                btnPopExecute.disabled = true;
+                btnPopExecute.classList.add('disabled');
+                btnPopDelete.disabled = true;
+                btnPopDelete.classList.add('disabled');
+            } else {
+                selectedJournalKey = key;
+                item.classList.add('selected');
+                btnPopExecute.disabled = false;
+                btnPopExecute.classList.remove('disabled');
+                btnPopDelete.disabled = false;
+                btnPopDelete.classList.remove('disabled');
+            }
+        });
+        journalList.appendChild(item);
+    });
+}
+
+function popJournal(key) {
+    const data = localStorage.getItem("PushJournal_" + key);
+    if (data !== null) {
+        lines = data.split('\n');
+        lineIndex = lines.length - 1;
+        charIndex = lines[lineIndex].length;
+        scrollIndex = 0;
+        saveToLocalStorage();
+        renderDisplay();
+    }
+}
+
+function exportAllJournals() {
+    let list = [];
+    try {
+        const savedList = localStorage.getItem("PushJournalList");
+        if (savedList) list = JSON.parse(savedList);
+    } catch(e) {
+        list = [];
+    }
+
+    if (list.length === 0) {
+        alert("エクスポートする日記がありません");
+        return;
+    }
+
+    let combinedText = "";
+    list.forEach(key => {
+        const content = localStorage.getItem("PushJournal_" + key);
+        combinedText += `====================\nTITLE: ${key}\n====================\n${content}\n\n\n`;
+    });
+
+    const blob = new Blob([combinedText], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'all_journals.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+}
+
+function executeDeleteJournal(key) {
+    let list = [];
+    try {
+        const savedList = localStorage.getItem("PushJournalList");
+        if (savedList) list = JSON.parse(savedList);
+    } catch(e) {
+        list = [];
+    }
+
+    list = list.filter(k => k !== key);
+    localStorage.setItem("PushJournalList", JSON.stringify(list));
+    localStorage.removeItem("PushJournal_" + key);
+
+    selectedJournalKey = null;
+    btnPopExecute.disabled = true;
+    btnPopExecute.classList.add('disabled');
+    btnPopDelete.disabled = true;
+    btnPopDelete.classList.add('disabled');
+
+    renderJournalList();
 }
 
 // ─── メニュー開閉と活性制御 ───
 function openMenu() {
-    // Save & Clear & Copy
+    // Save & Clear & Copy & Push & Pop
     const totalChars = lines.reduce((acc, cur) => acc + cur.length, 0);
     const hasText = totalChars > 0;
+
+    let list = [];
+    try {
+        const savedList = localStorage.getItem("PushJournalList");
+        if (savedList) list = JSON.parse(savedList);
+    } catch(e) {
+        list = [];
+    }
+    const hasJournals = list.length > 0;
     
     btnCopy.disabled = !hasText;
     btnPaste.disabled = false; // Menuを開いた時点ではクリップボードにアクセスしない
+    btnPush.disabled = !hasText;
+    btnPop.disabled = !hasJournals;
     btnSave.disabled = !hasText;
     btnClear.disabled = !hasText;
 
@@ -1177,7 +1424,7 @@ function closeMenu() {
 function setupPhysicalKeyboard() {
     window.addEventListener('keydown', (e) => {
         // ダイアログ表示中は物理入力を無効化
-        if (menuModal.classList.contains('active') || confirmModal.classList.contains('active')) {
+        if (menuModal.classList.contains('active') || confirmModal.classList.contains('active') || popModal.classList.contains('active')) {
             return;
         }
 
