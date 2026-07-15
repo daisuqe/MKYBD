@@ -151,10 +151,13 @@ window.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     setupPhysicalKeyboard();
 
-    // カーソル点滅タイマー
+    // カーソル点滅タイマー（DOM再構築せずカーソル要素のvisibilityだけ更新）
     setInterval(() => {
         cursorVisible = !cursorVisible;
-        renderDisplay();
+        const cursorEl = displayArea.querySelector('.cursor');
+        if (cursorEl) {
+            cursorEl.style.visibility = cursorVisible ? 'visible' : 'hidden';
+        }
     }, 530);
 
     // 画面位置強制リセット（iPhone Safari横画面のアドレスバー格納・座標ズレ防止）
@@ -1288,7 +1291,7 @@ function pushJournal() {
     list.push(targetKey);
     localStorage.setItem("PushJournalList", JSON.stringify(list));
 
-    alert(`日記を「${targetKey}」として保存しました`);
+    alert(`Memo「${targetKey}」として保存しました`);
 }
 
 function openPopModal() {
@@ -1317,7 +1320,7 @@ function renderJournalList() {
     }
 
     if (list.length === 0) {
-        journalList.innerHTML = '<div style="color: #666; font-size: 14px; text-align: center; padding: 20px;">保存された日記はありません</div>';
+        journalList.innerHTML = '<div style="color: #666; font-size: 14px; text-align: center; padding: 20px;">保存されたMemoはありません</div>';
         return;
     }
 
@@ -1372,7 +1375,7 @@ function exportAllJournals() {
     }
 
     if (list.length === 0) {
-        alert("エクスポートする日記がありません");
+        alert("エクスポートするMemoがありません");
         return;
     }
 
