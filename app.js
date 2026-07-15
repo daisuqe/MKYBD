@@ -780,11 +780,11 @@ function showDragGuides() {
         dragGuideContainer = document.createElement('div');
         dragGuideContainer.className = 'drag-guide-container';
         dragGuideContainer.innerHTML = `
-            <div class="drag-guide-key" id="guideHira" style="background-color: #6b3749; color: #dedede;">あ</div>
-            <div class="drag-guide-key" id="guideKata" style="background-color: #5c3000; color: #dedede;">ア</div>
-            <div class="drag-guide-key" id="guideA" style="background-color: #0f2d57;">A</div>
-            <div class="drag-guide-key" id="guideAt" style="background-color: #222222;">&</div>
-            <div class="drag-guide-key" id="guideOne" style="background-color: #16464b;">1</div>
+            <div class="drag-guide-key" id="guideHira" style="background-color: #908868; color: #ffffff;">あ</div>
+            <div class="drag-guide-key" id="guideKata" style="background-color: #886000; color: #ffffff;">ア</div>
+            <div class="drag-guide-key" id="guideA" style="background-color: #205080; color: #ffffff;">A</div>
+            <div class="drag-guide-key" id="guideAt" style="background-color: #484030; color: #ffffff;">&</div>
+            <div class="drag-guide-key" id="guideOne" style="background-color: #484030; color: #ffffff;">1</div>
         `;
         document.body.appendChild(dragGuideContainer);
     }
@@ -872,7 +872,6 @@ function setupSwitchKeyEvents(btn) {
             <div class="flick-indicator" id="indUp">▲</div>
             <div class="flick-indicator" id="indUpRight">▲</div>
             <div class="flick-indicator" id="indRight">▲</div>
-            <div class="flick-indicator" id="indDownRight">▲</div>
         `;
         document.body.appendChild(flickIndicators);
     }
@@ -900,13 +899,11 @@ function setupSwitchKeyEvents(btn) {
         const indUp = document.getElementById('indUp');
         const indUpRight = document.getElementById('indUpRight');
         const indRight = document.getElementById('indRight');
-        const indDownRight = document.getElementById('indDownRight');
         indUp.style.transform = `translate(0px, -${size * 0.7}px) rotate(0deg)`;
         indUpRight.style.transform = `translate(${size * 0.55}px, -${size * 0.55}px) rotate(45deg)`;
         indRight.style.transform = `translate(${size * 0.7}px, 0px) rotate(90deg)`;
-        indDownRight.style.transform = `translate(${size * 0.55}px, ${size * 0.55}px) rotate(135deg)`;
         const indicatorSize = size * 0.4;
-        [indUp, indUpRight, indRight, indDownRight].forEach(ind => {
+        [indUp, indUpRight, indRight].forEach(ind => {
             ind.style.width = `${indicatorSize}px`;
             ind.style.height = `${indicatorSize}px`;
             ind.style.fontSize = `${indicatorSize * 1.06}px`;
@@ -964,12 +961,10 @@ function setupSwitchKeyEvents(btn) {
             const indUp = document.getElementById('indUp');
             const indUpRight = document.getElementById('indUpRight');
             const indRight = document.getElementById('indRight');
-            const indDownRight = document.getElementById('indDownRight');
 
             indUp.style.color = '#e6730f';
             indUpRight.style.color = '#e6730f';
             indRight.style.color = '#e6730f';
-            indDownRight.style.color = '#e6730f';
 
             if (angle >= 67.5 && angle < 112.5) {
                 indUp.style.color = '#ffa047';
@@ -977,8 +972,6 @@ function setupSwitchKeyEvents(btn) {
                 indUpRight.style.color = '#ffa047';
             } else if (angle >= -22.5 && angle < 22.5) {
                 indRight.style.color = '#ffa047';
-            } else if (angle >= -67.5 && angle < -22.5) {
-                indDownRight.style.color = '#ffa047';
             }
         } else {
             // オレンジのキーの中にいる場合（距離30px以内 ➔ パカパカ切り替えを防ぐ）
@@ -998,12 +991,10 @@ function setupSwitchKeyEvents(btn) {
             const indUp = document.getElementById('indUp');
             const indUpRight = document.getElementById('indUpRight');
             const indRight = document.getElementById('indRight');
-            const indDownRight = document.getElementById('indDownRight');
-            if (indUp && indUpRight && indRight && indDownRight) {
+            if (indUp && indUpRight && indRight) {
                 indUp.style.color = '#e6730f';
                 indUpRight.style.color = '#e6730f';
                 indRight.style.color = '#e6730f';
-                indDownRight.style.color = '#e6730f';
             }
         }
     };

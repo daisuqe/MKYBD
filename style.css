@@ -9,7 +9,7 @@
 
 body {
     background-color: #050505;
-    color: #dedede;
+    color: #f0f0f0;
     font-family: 'Inter', 'Outfit', sans-serif;
     overflow: hidden;
     height: 100dvh; /* Dynamic Viewport Heightでツールバー開閉時のズレを防止 */
@@ -33,7 +33,7 @@ body {
     border-radius: 8px;
     display: flex;
     flex-direction: column;
-    padding: 10px;
+    padding: 10px 10px 6px 10px; /* bottom: 10px×60%=6px キー下の隔間 */
     position: relative;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
     container-type: inline-size; /* コンテナクエリを有効にしてキー内の比率を完全同期 */
@@ -122,7 +122,7 @@ body {
     background-color: #424242; /* defaultKeyColor */
     border-radius: 1.6cqw; /* コンテナ幅に対する角丸比率を固定（携帯/縦画面での歪みを防止） */
     border: none;
-    color: #dedede;
+    color: #f0f0f0;
     font-weight: bold;
     display: flex;
     justify-content: center;
@@ -137,13 +137,13 @@ body {
 }
 
 .key:active {
-    background-color: #bfbfbf;
+    background-color: #f0f0f0;
     transform: scale(0.95);
 }
 
 /* 文字数・ケースに応じたフォントサイズ定義 (コンテナ相対cqw単位で縦画面でも文字縮小が完全同期) */
 .key.char-len-1-lower {
-    font-size: 8.3cqw;
+    font-size: 9.8cqw;
     line-height: 1;
 }
 
@@ -182,24 +182,24 @@ body {
 
 /* キーボードモードごとのカラー設定 */
 .keyboard-lower .key {
-    background-color: #2a0f02; /* 少し明るくした暗い茶色 */
+    background-color: #683028; /* 少し明るくした暗い茶色 */
 }
 .keyboard-lower .key:active {
     background-color: #3d1b09;
 }
 
 .keyboard-upper .key {
-    background-color: #0f2d57; /* 少し明るくした暗いネイビー */
+    background-color: #205080; /* 少し明るくした暗いネイビー */
 }
 .keyboard-upper .key:active {
     background-color: #183f73;
 }
 
 .keyboard-number .key {
-    background-color: #222222; /* もっと暗いグレー */
+    background-color: #484030; /* もっと暗いグレー */
 }
 .keyboard-number .key.blue-number {
-    background-color: #16464b; /* 中間の明るさで少し彩度を高めたティール (0123456789./*-+) */
+    background-color: #166058; /* 中間の明るさで少し彩度を高めたティール (0123456789./*-+) */
 }
 .keyboard-number .key.blue-number:active {
     background-color: #205a60;
@@ -209,15 +209,15 @@ body {
 }
 
 .keyboard-symbol .key {
-    background-color: #222222; /* もっと暗いグレー */
+    background-color: #484030; /* もっと暗いグレー */
 }
 .keyboard-symbol .key:active {
     background-color: #bfbfbf;
 }
 
 .keyboard-hiragana .key {
-    background-color: #6b3749; /* 少し明るくしたピンク寄りの赤みがかったグレー */
-    color: #dedede; /* 文字色は白 */
+    background-color: #908868; /* 少し明るくしたピンク寄りの赤みがかったグレー */
+    color: #f0f0f0; /* 文字色は白 */
 }
 .keyboard-hiragana .key:active {
     background-color: #85475c;
@@ -227,12 +227,12 @@ body {
 .keyboard-hiragana .key.btn-enter,
 .keyboard-hiragana .key.btn-enter-bs,
 .keyboard-hiragana .key.btn-bs {
-    color: #dedede;
+    color: #f0f0f0;
 }
 
 .keyboard-katakana .key {
-    background-color: #5c3000; /* さらに彩度を高めた暗いイエローブラウン */
-    color: #dedede;
+    background-color: #886000; /* さらに彩度を高めた暗いイエローブラウン */
+    color: #f0f0f0;
 }
 .keyboard-katakana .key:active {
     background-color: #7d4200;
@@ -242,21 +242,21 @@ body {
 .keyboard-katakana .key.btn-enter,
 .keyboard-katakana .key.btn-enter-bs,
 .keyboard-katakana .key.btn-bs {
-    color: #dedede;
+    color: #f0f0f0;
 }
 
 /* 特殊キーカラー */
 .key.btn-enter {
-    background-color: #0d5e17 !important; /* enterKeyColor */
-    font-size: 3.22cqw !important;
+    background-color: #0088e0 !important; /* enterKeyColor */
+    font-size: 3.50cqw !important;
 }
 .key.btn-enter:active {
     background-color: #bfbfbf !important;
 }
 
 .key.btn-enter-bs {
-    background-color: #762216 !important; /* bsKeyColor */
-    font-size: 6.24cqw !important;
+    background-color: #a03016 !important; /* bsKeyColor */
+    font-size: 6.6cqw !important;
 }
 .key.btn-enter-bs:active {
     background-color: #bfbfbf !important;
@@ -271,14 +271,19 @@ body {
 }
 
 .key.btn-tab, .key.btn-ins, .key.btn-nav {
-    background-color: #1b4097 !important; /* tabKeyColor / insKeyColor */
+    background-color: #0048d0 !important; /* tabKeyColor / insKeyColor */
 }
 .key.btn-tab:active, .key.btn-ins:active, .key.btn-nav:active {
     background-color: #bfbfbf !important;
 }
 
+/* カーソルキー：Tabと同じ青系を明示的に保証 */
+.key.btn-nav {
+    background-color: #0048d0 !important;
+}
+
 .key.btn-ins {
-    background-color: #918649 !important;
+    background-color: #a88800 !important;
 }
 
 .key.btn-menu {
@@ -296,8 +301,8 @@ body {
 }
 
 .key.btn-space {
-    background-color: #6b6b6b !important; /* spaceKeyColor */
-    font-size: 3.0cqw !important;
+    background-color: #b0b288 !important; /* spaceKeyColor */
+    font-size: 3.2cqw !important;
 }
 .key.btn-space:active {
     background-color: #bfbfbf !important;
@@ -334,7 +339,7 @@ body {
     position: absolute;
     width: 30px;
     height: 30px;
-    color: #dedede;
+    color: #f0f0f0;
     font-size: 32px; /* 32px に拡大 */
     font-weight: bold;
     display: flex;
@@ -402,7 +407,7 @@ body {
 .pop-title {
     font-size: 22px;
     font-weight: bold;
-    color: #dedede;
+    color: #f0f0f0;
     margin-bottom: 15px;
 }
 
@@ -455,7 +460,7 @@ body {
     flex: 1;
     height: 40px;
     background-color: #404040;
-    color: #dedede;
+    color: #f0f0f0;
     border: none;
     border-radius: 10px;
     font-size: 16px;
@@ -491,7 +496,7 @@ body {
 .menu-title {
     font-size: 22px;
     font-weight: bold;
-    color: #dedede;
+    color: #f0f0f0;
     margin-bottom: 15px;
     margin-top: 5px;
 }
@@ -507,7 +512,7 @@ body {
     width: 100%;
     height: 40px;
     background-color: #404040;
-    color: #dedede;
+    color: #f0f0f0;
     border: none;
     border-radius: 10px;
     font-size: 18px;
@@ -545,7 +550,7 @@ body {
 .confirm-title {
     font-size: 20px;
     font-weight: bold;
-    color: #dedede;
+    color: #f0f0f0;
     margin-top: 10px;
 }
 
@@ -573,12 +578,12 @@ body {
 
 .confirm-btn.yes {
     background-color: #762216; /* bsKeyColor */
-    color: #dedede;
+    color: #f0f0f0;
 }
 
 .confirm-btn.no {
     background-color: #4a4a4a;
-    color: #dedede;
+    color: #f0f0f0;
 }
 
 /* レスポンシブ表示調整（縦向き表示など） */
@@ -589,6 +594,17 @@ body {
         height: 100vh;
         border-radius: 0;
         border: none;
+    }
+
+    /* キーを画面縦横比に合わせて縦長に（最大1:1.9でキャップ） */
+    .key {
+        aspect-ratio: 1 / clamp(1, calc(100vh / 100vw), 1.9);
+        max-height: none;
+    }
+
+    /* keyboard-containerの固定高さを解除してキー比率に追従 */
+    .keyboard-container {
+        height: auto;
     }
 }
 
@@ -610,7 +626,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    color: #dedede;
+    color: #f0f0f0;
     font-size: 6.6cqw; /* 大文字キーと同等サイズに比率化 */
     font-weight: bold;
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.6);
@@ -654,7 +670,7 @@ body {
     height: 100%;
     padding: 0 16px;
     background-color: #1a1a1a;
-    color: #dedede;
+    color: #f0f0f0;
     border: none;
     border-right: 1px solid #2d2d2d;
     border-radius: 0;
