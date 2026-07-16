@@ -1,4 +1,196 @@
 // 定数と状態管理
+// 各キーカラーに対するCSSフィルタ値（#511612の画像を目標カラーに変換する値）
+const keyFilters = {
+    lower: 'hue-rotate(18deg) saturate(0.45) brightness(1.35)',
+    upper: 'hue-rotate(207deg) saturate(0.9) brightness(1.6)',
+    number: 'hue-rotate(37deg) saturate(0.3) brightness(1.2)',
+    blueNumber: 'hue-rotate(171deg) saturate(1.0) brightness(1.2)',
+    symbol: 'hue-rotate(37deg) saturate(0.3) brightness(1.2)',
+    hiragana: 'hue-rotate(45deg) saturate(0.3) brightness(2.2)',
+    katakana: 'hue-rotate(39deg) saturate(1.5) brightness(1.15)',
+    enter: 'hue-rotate(180deg) saturate(1.5) brightness(3.0)',
+    enterBs: 'hue-rotate(8deg) saturate(1.1) brightness(1.8)',
+    bs: 'hue-rotate(4deg) saturate(1.0) brightness(1.4)',
+    tab: 'hue-rotate(216deg) saturate(1.5) brightness(2.0)',
+    ins: 'hue-rotate(46deg) saturate(1.5) brightness(1.7)',
+    menu: 'hue-rotate(35deg) saturate(1.3) brightness(2.1)',
+    switch: 'hue-rotate(35deg) saturate(1.3) brightness(2.1)',
+    space: 'hue-rotate(59deg) saturate(0.3) brightness(4.0)',
+    yellow: 'hue-rotate(42deg) saturate(1.5) brightness(2.1)'
+};
+
+// タイピング音（Rainy75 Pro風のThocky音）の生成
+let audioCtx = null;
+
+// キー位置（X座標：0〜9、中心は4.5）のマッピング。外側ほど高音化するため
+const keyPositions = {
+    "q": 0, "w": 1, "e": 2, "r": 3, "t": 4, "y": 5, "u": 6, "i": 7, "o": 8, "p": 9,
+    "Q": 0, "W": 1, "E": 2, "R": 3, "T": 4, "Y": 5, "U": 6, "I": 7, "O": 8, "P": 9,
+    "0": 9, "1": 0, "2": 1, "3": 2, "4": 3, "5": 4, "6": 5, "7": 6, "8": 7, "9": 8,
+    "a": 0, "s": 1, "d": 2, "f": 3, "h": 4, "j": 5, "g": 6, "k": 7, "l": 8, "Enter": 9,
+    "A": 0, "S": 1, "D": 2, "F": 3, "H": 4, "J": 5, "G": 6, "K": 7, "L": 8,
+    "Switch": 0, "z": 1, "x": 2, "c": 3, "v": 4, "b": 5, "n": 6, "m": 7, ".": 8, "Space": 9,
+    "Z": 1, "X": 2, "C": 3, "V": 4, "B": 5, "N": 6, "M": 7, "、": 2, "。": 8,
+    "BS": 8, "Tab": 6, "Ins": 7, "Ovr": 7, "Menu": 9,
+    "↑": 7, "↓": 7, "←": 6, "→": 8
+};
+
+function playTypingSound(type = 'normal', key = '') {
+    try {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+
+        const now = audioCtx.currentTime;
+
+        // キーボードの外側にいくほど高音にする倍率を計算 (中心4.5から離れるほど最大約11.2%高音化)
+        let posFactor = 1.0;
+        if (key && keyPositions[key] !== undefined) {
+            const col = keyPositions[key];
+            posFactor = 1.0 + Math.abs(col - 4.5) * 0.025;
+        }
+
+        // --- 共通のハイパスフィルターとマスターゲイン ---
+        const hpFilter = audioCtx.createBiquadFilter();
+        hpFilter.type = 'highpass';
+        hpFilter.frequency.setValueAtTime(55 * posFactor, now); // 低音側もposFactorに追従
+
+        const masterGain = audioCtx.createGain();
+        masterGain.gain.setValueAtTime(0.24, now); // 全体の出力バランス調整
+
+        hpFilter.connect(masterGain);
+        masterGain.connect(audioCtx.destination);
+
+        // 各種キータイプごとの基準パラメータ
+        let thockFreq = 210 * posFactor; 
+        let thockDecay = 0.05;
+        let thockVol = 0.35;
+
+        let tapFreq = 700 * posFactor;
+        let tapDecay = 0.015;
+        let tapVol = 0.4;
+
+        let noiseFreq = 1300 * posFactor;
+        let noiseQ = 2.0;
+        let noiseDecay = 0.02;
+        let noiseVol = 0.12;
+
+        if (type === 'space') {
+            thockFreq = 150 * posFactor; 
+            thockDecay = 0.08;
+            thockVol = 0.55;
+            tapFreq = 450 * posFactor;
+            tapDecay = 0.02;
+            tapVol = 0.35;
+            noiseFreq = 1000 * posFactor;
+            noiseVol = 0.15;
+        } else if (type === 'enter') {
+            thockFreq = 180 * posFactor;
+            thockDecay = 0.07;
+            thockVol = 0.45;
+            tapFreq = 800 * posFactor;
+            tapDecay = 0.02;
+            tapVol = 0.45;
+            noiseFreq = 1500 * posFactor;
+            noiseVol = 0.16;
+        } else if (type === 'bs') {
+            thockFreq = 230 * posFactor;
+            thockDecay = 0.045;
+            thockVol = 0.3;
+            tapFreq = 900 * posFactor;
+            tapDecay = 0.015;
+            tapVol = 0.35;
+            noiseFreq = 1600 * posFactor;
+            noiseVol = 0.08;
+        } else if (type === 'switch') {
+            thockFreq = 250 * posFactor;
+            thockDecay = 0.04;
+            thockVol = 0.25;
+            tapFreq = 1000 * posFactor;
+            tapDecay = 0.012;
+            tapVol = 0.25;
+            noiseFreq = 1800 * posFactor;
+            noiseVol = 0.06;
+        }
+
+        // --- 系統A: 少し高めの音 (1.55倍) + 音量（0.225倍）（キー接触音：余韻を少し長く） ---
+        createSoundSource(thockFreq * 1.55, thockVol * 0.225, thockDecay * 0.75, tapFreq * 1.55, tapVol * 0.225, tapDecay * 0.75, noiseFreq * 1.55, noiseVol * 0.225, noiseDecay * 0.75, noiseQ, now, 0, hpFilter);
+
+        // --- 系統B: 劇的に低い音 (0.4倍) + 音量（0.525倍）（0.1秒遅れて鳴る底打ちのコトコト音） ---
+        createSoundSource(thockFreq * 0.4, thockVol * 0.525, thockDecay * 1.8, tapFreq * 0.4, tapVol * 0.525, tapDecay * 1.8, noiseFreq * 0.4, noiseVol * 0.525, noiseDecay * 1.8, noiseQ, now, 0.1, hpFilter);
+
+    } catch (e) {
+        console.warn("AudioContext playback failed: ", e);
+    }
+}
+
+// レイヤー音源生成用サブ関数 (ディレイ対応)
+function createSoundSource(thockF, thockV, thockD, tapF, tapV, tapD, noiseF, noiseV, noiseD, noiseQ, now, delay, destination) {
+    const oscThock = audioCtx.createOscillator();
+    const gainThock = audioCtx.createGain();
+    oscThock.type = 'sine';
+
+    const oscTap = audioCtx.createOscillator();
+    const gainTap = audioCtx.createGain();
+    oscTap.type = 'triangle';
+
+    const bufferSize = audioCtx.sampleRate * 0.04;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1;
+    }
+    const noiseSource = audioCtx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+
+    const noiseFilter = audioCtx.createBiquadFilter();
+    noiseFilter.type = 'bandpass';
+    const gainNoise = audioCtx.createGain();
+
+    oscThock.connect(gainThock);
+    gainThock.connect(destination);
+
+    oscTap.connect(gainTap);
+    gainTap.connect(destination);
+
+    noiseSource.connect(noiseFilter);
+    noiseFilter.connect(gainNoise);
+    gainNoise.connect(destination);
+
+    const targetTime = now + delay;
+
+    // Thock
+    oscThock.frequency.setValueAtTime(thockF, targetTime);
+    gainThock.gain.setValueAtTime(0.001, targetTime);
+    gainThock.gain.linearRampToValueAtTime(thockV, targetTime + 0.003); 
+    gainThock.gain.exponentialRampToValueAtTime(0.001, targetTime + thockD);
+
+    // Tap
+    oscTap.frequency.setValueAtTime(tapF, targetTime);
+    gainTap.gain.setValueAtTime(0.001, targetTime);
+    gainTap.gain.linearRampToValueAtTime(tapV, targetTime + 0.002);
+    gainTap.gain.exponentialRampToValueAtTime(0.001, targetTime + tapD);
+
+    // Noise
+    noiseFilter.frequency.setValueAtTime(noiseF, targetTime);
+    noiseFilter.Q.setValueAtTime(noiseQ, targetTime);
+    gainNoise.gain.setValueAtTime(0.001, targetTime);
+    gainNoise.gain.linearRampToValueAtTime(noiseV, targetTime + 0.002);
+    gainNoise.gain.exponentialRampToValueAtTime(0.001, targetTime + noiseD);
+
+    oscThock.start(targetTime);
+    oscThock.stop(targetTime + thockD + 0.05);
+
+    oscTap.start(targetTime);
+    oscTap.stop(targetTime + tapD + 0.05);
+
+    noiseSource.start(targetTime);
+    noiseSource.stop(targetTime + noiseD + 0.05);
+}
+
 const KeyboardMode = {
     Lower: 'Lower',
     Upper: 'Upper',
@@ -32,6 +224,9 @@ let confirmAction = null; // "clear" または "delete"
 // 長押しリピート用変数
 let repeatTimer = null;
 let repeatInterval = null;
+
+// 現在タッチで押し込まれているキーの位置情報
+let activePressedKey = null;
 
 const romajiMap = {
     "a": "あ", "i": "い", "u": "う", "e": "え", "o": "お",
@@ -145,6 +340,10 @@ window.addEventListener('DOMContentLoaded', () => {
         lineIndex = lines.length - 1;
         charIndex = lines[lineIndex].length;
     }
+
+    // keytop02.pngのプリロード（タッチ時の画像切り替えラグ防止）
+    const preloadActiveImg = new Image();
+    preloadActiveImg.src = 'keytop02.png';
 
     renderDisplay();
     buildKeyboard();
@@ -328,41 +527,32 @@ function buildKeyboard() {
             if (keyText === "Enter") {
                 if (isTempShiftMode) {
                     actualText = "BS";
-                    button.textContent = "BS";
                     button.classList.add('functional', 'btn-enter-bs');
                 } else {
                     actualText = "Enter";
-                    button.textContent = "Enter";
                     button.classList.add('functional', 'btn-enter');
                 }
             } else if (keyText === "Switch") {
                 actualText = "A&\na 1";
-                button.innerHTML = "A&<br>a 1";
                 button.classList.add('functional', 'btn-switch');
                 setupSwitchKeyEvents(button);
             } else if (keyText === "Space") {
                 actualText = "Space";
-                button.textContent = "Space";
                 button.classList.add('functional', 'btn-space');
             } else if (keyText === "BS") {
                 actualText = "BS";
-                button.textContent = "BS";
                 button.classList.add('functional', 'btn-bs');
             } else if (keyText === "Tab") {
                 actualText = "Tab";
-                button.textContent = "Tab";
                 button.classList.add('functional', 'btn-tab');
             } else if (keyText === "Ins") {
                 actualText = isInsertMode ? "Ins" : "Ovr";
-                button.textContent = actualText;
                 button.classList.add('functional', 'btn-ins');
             } else if (["↑", "↓", "←", "→"].includes(keyText)) {
                 actualText = keyText;
-                button.textContent = keyText;
                 button.classList.add('btn-nav');
             } else if (keyText === "Menu") {
                 actualText = "Menu";
-                button.textContent = "Menu";
                 button.classList.add('functional', 'btn-menu');
             } else {
                 actualText = keyText;
@@ -372,7 +562,6 @@ function buildKeyboard() {
                     actualText = "◀";
                     button.classList.add('functional', 'btn-yellow');
                 }
-                button.textContent = actualText;
                 // 数字キーボード内の数字と特定の記号に青色を設定
                 if (currentMode === KeyboardMode.Number && "0123456789./*-+".includes(keyText)) {
                     button.classList.add('blue-number');
@@ -400,6 +589,92 @@ function buildKeyboard() {
             } else {
                 button.classList.add(`char-len-${displayLength}`);
             }
+
+            // --- 背景カラーフィルタタイプの判定 ---
+            let keyColorType = 'lower'; // デフォルト
+
+            if (keyText === "Enter") {
+                keyColorType = isTempShiftMode ? 'enterBs' : 'enter';
+            } else if (keyText === "Switch") {
+                keyColorType = 'switch';
+            } else if (keyText === "Space") {
+                keyColorType = 'space';
+            } else if (keyText === "BS") {
+                keyColorType = 'bs';
+            } else if (keyText === "Tab" || ["↑", "↓", "←", "→"].includes(keyText)) {
+                keyColorType = 'tab';
+            } else if (keyText === "Ins") {
+                keyColorType = 'ins';
+            } else if (keyText === "Menu") {
+                keyColorType = 'menu';
+            } else {
+                if (currentMode === KeyboardMode.Upper || isTempShiftMode) {
+                    keyColorType = 'upper';
+                } else if (currentMode === KeyboardMode.Hiragana) {
+                    keyColorType = 'hiragana';
+                } else if (currentMode === KeyboardMode.Katakana) {
+                    keyColorType = 'katakana';
+                } else if (currentMode === KeyboardMode.Number) {
+                    keyColorType = "0123456789./*-+".includes(keyText) ? 'blueNumber' : 'number';
+                } else if (currentMode === KeyboardMode.Symbol) {
+                    keyColorType = 'symbol';
+                } else {
+                    keyColorType = 'lower';
+                }
+                
+                // 特殊黄色キー（▶等）の判定
+                if (keyText === "▶" || (isConverting && keyText === "。")) {
+                    keyColorType = 'yellow';
+                }
+            }
+
+            // 1. キートップ背景画像レイヤーの追加（CSSフィルタで色変換）
+            const bgDiv = document.createElement('div');
+            bgDiv.className = 'key-bg';
+            bgDiv.dataset.colorType = keyColorType; // 物理キー打鍵時の色参照用
+            bgDiv.style.filter = keyFilters[keyColorType] || 'none';
+            button.appendChild(bgDiv);
+
+            // 2. キートップ文字・記号レイヤーの追加（背景画像の上に重なり、フィルタの影響を受けない）
+            const textSpan = document.createElement('span');
+            textSpan.className = 'key-text';
+            if (keyText === "Switch") {
+                textSpan.innerHTML = "A&<br>a 1";
+            } else {
+                textSpan.textContent = actualText;
+            }
+            button.appendChild(textSpan);
+
+            // タッチデバイスでの画像切り替えを100%確実にするためのイベントリスナー
+            const setKeyActiveState = (isActive) => {
+                if (isActive) {
+                    bgDiv.style.backgroundImage = "url('keytop02.png')";
+                    bgDiv.style.filter = (keyFilters[keyColorType] || 'none') + ' brightness(0.75)';
+                    textSpan.style.filter = 'brightness(0.75)'; // フォント色の明るさを25%落とす
+                } else {
+                    bgDiv.style.backgroundImage = "url('keytop01.png')";
+                    bgDiv.style.filter = keyFilters[keyColorType] || 'none';
+                    textSpan.style.filter = 'none'; // 元に戻す
+                }
+            };
+
+            // 再構築時に現在押されているキーであればアクティブ状態にする
+            const isCurrentlyPressed = activePressedKey && activePressedKey.row === rowIdx && activePressedKey.col === colIdx;
+            setKeyActiveState(isCurrentlyPressed);
+
+            button.addEventListener('pointerdown', () => {
+                activePressedKey = { row: rowIdx, col: colIdx };
+                setKeyActiveState(true);
+            });
+            const releaseHandler = () => {
+                if (activePressedKey && activePressedKey.row === rowIdx && activePressedKey.col === colIdx) {
+                    activePressedKey = null;
+                }
+                setKeyActiveState(false);
+            };
+            button.addEventListener('pointerup', releaseHandler);
+            button.addEventListener('pointercancel', releaseHandler);
+            button.addEventListener('pointerleave', releaseHandler);
 
             // Switchキー以外の通常キーのクリック処理
             if (keyText !== "Switch") {
@@ -431,8 +706,21 @@ function buildKeyboard() {
 }
 
 // キー入力処理の実装
-function handleKeyInput(key) {
+function handleKeyInput(key, isRepeatInput = false) {
     if (key === "") return;
+
+    // タイピング音を再生 (Rainy75 Pro風、押しっぱなしの時は最初の1回のみ)
+    if (!isRepeatInput && !repeatInterval) {
+        let soundType = 'normal';
+        if (key === 'Space') {
+            soundType = 'space';
+        } else if (key === 'Enter') {
+            soundType = 'enter';
+        } else if (key === 'BS') {
+            soundType = 'bs';
+        }
+        playTypingSound(soundType, key);
+    }
 
     if (key === "Tab") {
         flushRomajiBuffer();
@@ -776,7 +1064,7 @@ function startRepeat(key) {
     stopRepeat();
     repeatTimer = setTimeout(() => {
         repeatInterval = setInterval(() => {
-            handleKeyInput(key);
+            handleKeyInput(key, true); // リピート中であることを伝える
         }, 80); // リピート間隔 80ms
     }, 1000); // 長押し判定 1秒
 }
@@ -1059,12 +1347,14 @@ function setupSwitchKeyEvents(btn) {
                 // ガイド以外の場所で離された場合は切り替えない。一時シフトしていた場合は解除
                 isTempShiftMode = false;
                 buildKeyboard();
+                playTypingSound('switch');
             }
         } else {
             // タップまたははみ出なかった場合
             if (isTempShiftMode) {
                 isTempShiftMode = false;
                 buildKeyboard();
+                playTypingSound('switch');
             } else {
                 // 小文字キーボード以外でタップした場合は小文字に戻る
                 if (currentMode !== KeyboardMode.Lower) {
@@ -1090,6 +1380,7 @@ function setKeyboardMode(mode) {
     clearHiraganaBuffer();
     buildKeyboard();
     renderDisplay();
+    playTypingSound('switch');
 }
 
 // ─── 表示エリアのクリックによるカーソル移動 ───
@@ -1450,12 +1741,89 @@ function closeMenu() {
     menuModal.classList.remove('active');
 }
 
+// 物理キーのキー文字列から画面上のキー座標 (row, col) を特定するヘルパー
+function findKeyCoords(eventKey) {
+    let target = eventKey;
+    if (eventKey === "Backspace") target = "BS";
+    else if (eventKey === "Enter") {
+        target = isTempShiftMode ? "BS" : "Enter";
+    }
+    else if (eventKey === "Tab") target = "Tab";
+    else if (eventKey === "ArrowLeft") target = "←";
+    else if (eventKey === "ArrowRight") target = "→";
+    else if (eventKey === "ArrowUp") target = "↑";
+    else if (eventKey === "ArrowDown") target = "↓";
+    else if (eventKey === "Insert") target = "Ins";
+    else if (eventKey === " ") target = "Space";
+    else if (eventKey === "-") {
+        if (currentMode === KeyboardMode.Hiragana || currentMode === KeyboardMode.Katakana) {
+            target = "▶";
+        }
+    }
+    else if (eventKey === ".") {
+        if (currentMode === KeyboardMode.Hiragana || currentMode === KeyboardMode.Katakana) {
+            target = isConverting ? "◀" : "。";
+        }
+    }
+    else if (eventKey === ",") {
+        if (currentMode === KeyboardMode.Hiragana || currentMode === KeyboardMode.Katakana) {
+            target = "、";
+        }
+    }
+
+    let keyRows;
+    if (isTempShiftMode) {
+        keyRows = keysUpper;
+    } else {
+        switch (currentMode) {
+            case KeyboardMode.Upper: keyRows = keysUpper; break;
+            case KeyboardMode.Hiragana: keyRows = keysHiragana; break;
+            case KeyboardMode.Katakana: keyRows = keysKatakana; break;
+            case KeyboardMode.Number: keyRows = keysNumber; break;
+            case KeyboardMode.Symbol: keyRows = keysSymbol; break;
+            case KeyboardMode.Lower:
+            default: keyRows = keysLower; break;
+        }
+    }
+
+    for (let r = 0; r < keyRows.length; r++) {
+        for (let c = 0; c < keyRows[r].length; c++) {
+            let cell = keyRows[r][c];
+            if (cell.toLowerCase() === target.toLowerCase()) {
+                return { row: r, col: c };
+            }
+        }
+    }
+    return null;
+}
+
 // ─── 物理キーボード連携 ───
 function setupPhysicalKeyboard() {
     window.addEventListener('keydown', (e) => {
         // ダイアログ表示中は物理入力を無効化
         if (menuModal.classList.contains('active') || confirmModal.classList.contains('active') || popModal.classList.contains('active')) {
             return;
+        }
+
+        // 物理キー押下で画面上の対応するキーを押し込む
+        if (!e.repeat) {
+            const coords = findKeyCoords(e.key);
+            if (coords) {
+                activePressedKey = coords;
+                const btn = keyboardContainer.querySelector(`.key[data-row="${coords.row}"][data-col="${coords.col}"]`);
+                if (btn) {
+                    const bg = btn.querySelector('.key-bg');
+                    const txt = btn.querySelector('.key-text');
+                    const colorType = bg ? bg.dataset.colorType : 'lower';
+                    if (bg) {
+                        bg.style.backgroundImage = "url('keytop02.png')";
+                        bg.style.filter = (keyFilters[colorType] || 'none') + ' brightness(0.75)';
+                    }
+                    if (txt) {
+                        txt.style.filter = 'brightness(0.75)';
+                    }
+                }
+            }
         }
 
         let mappedKey = null;
@@ -1492,13 +1860,35 @@ function setupPhysicalKeyboard() {
 
         if (mappedKey !== null) {
             e.preventDefault();
-            handleKeyInput(mappedKey);
+            handleKeyInput(mappedKey, e.repeat);
             return;
         }
 
         if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
             e.preventDefault();
-            handleKeyInput(e.key);
+            handleKeyInput(e.key, e.repeat);
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        const coords = findKeyCoords(e.key);
+        if (coords) {
+            if (activePressedKey && activePressedKey.row === coords.row && activePressedKey.col === coords.col) {
+                activePressedKey = null;
+            }
+            const btn = keyboardContainer.querySelector(`.key[data-row="${coords.row}"][data-col="${coords.col}"]`);
+            if (btn) {
+                const bg = btn.querySelector('.key-bg');
+                const txt = btn.querySelector('.key-text');
+                const colorType = bg ? bg.dataset.colorType : 'lower';
+                if (bg) {
+                    bg.style.backgroundImage = "url('keytop01.png')";
+                    bg.style.filter = keyFilters[colorType] || 'none';
+                }
+                if (txt) {
+                    txt.style.filter = 'none';
+                }
+            }
         }
     });
 }
