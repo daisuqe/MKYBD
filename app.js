@@ -69,7 +69,7 @@ function updateSVGFilters() {
             const bFactor = (rgb[2] / 81).toFixed(4);
 
             const filterHtml = `
-                <filter id="svg-filter-${jsKeyName}">
+                <filter id="svg-filter-${jsKeyName}" color-interpolation-filters="sRGB">
                     <feColorMatrix type="matrix" values="
                         ${rFactor} 0 0 0 0
                         ${gFactor} 0 0 0 0
