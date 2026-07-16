@@ -1,23 +1,89 @@
-// 定数と状態管理
-// 各キーカラーに対するCSSフィルタ値（#511612の画像を目標カラーに変換する値）
-const keyFilters = {
-    lower: 'hue-rotate(18deg) saturate(0.45) brightness(1.35)',
-    upper: 'hue-rotate(207deg) saturate(0.9) brightness(1.6)',
-    number: 'hue-rotate(37deg) saturate(0.3) brightness(1.2)',
-    blueNumber: 'hue-rotate(171deg) saturate(1.0) brightness(1.2)',
-    symbol: 'hue-rotate(37deg) saturate(0.3) brightness(1.2)',
-    hiragana: 'hue-rotate(45deg) saturate(0.3) brightness(2.2)',
-    katakana: 'hue-rotate(39deg) saturate(1.5) brightness(1.15)',
-    enter: 'hue-rotate(180deg) saturate(1.5) brightness(3.0)',
-    enterBs: 'hue-rotate(8deg) saturate(1.1) brightness(1.8)',
-    bs: 'hue-rotate(4deg) saturate(1.0) brightness(1.4)',
-    tab: 'hue-rotate(216deg) saturate(1.5) brightness(2.0)',
-    ins: 'hue-rotate(46deg) saturate(1.5) brightness(1.7)',
-    menu: 'hue-rotate(35deg) saturate(1.3) brightness(2.1)',
-    switch: 'hue-rotate(35deg) saturate(1.3) brightness(2.1)',
-    space: 'hue-rotate(59deg) saturate(0.3) brightness(4.0)',
-    yellow: 'hue-rotate(42deg) saturate(1.5) brightness(2.1)'
+// デフォルトカラー（CSSが読み込めなかった場合や空欄の時のフォールバック色）
+const defaultColors = {
+    lower: '#56483c',
+    upper: '#205080',
+    number: '#484030',
+    blueNumber: '#166058',
+    symbol: '#484030',
+    hiragana: '#908868',
+    katakana: '#6e5010',
+    enter: '#009ce0',
+    enterBs: '#a03016',
+    bs: '#762216',
+    tab: '#0048d0',
+    ins: '#a88800',
+    menu: '#c97520',
+    switch: '#f3c000',
+    space: '#efeeec',
+    yellow: '#d9a300'
 };
+
+function hexToRgb(hex) {
+    hex = hex.trim().replace('#', '');
+    if (hex.length === 3) {
+        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    }
+    const bigint = parseInt(hex, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return [r, g, b];
+}
+
+// 動的なSVGカラーマトリクスフィルタの作成
+function updateSVGFilters() {
+    const svgContainer = document.getElementById('svg-filters');
+    if (!svgContainer) return;
+    svgContainer.innerHTML = ''; // クリア
+
+    const computedStyles = getComputedStyle(document.documentElement);
+    const colorKeys = [
+        'lower', 'upper', 'number', 'blue-number', 'symbol', 
+        'hiragana', 'katakana', 'enter', 'enter-bs', 'bs', 
+        'tab', 'ins', 'menu', 'switch', 'space', 'yellow'
+    ];
+
+    colorKeys.forEach(key => {
+        const jsKeyName = key.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+        let cssColor = computedStyles.getPropertyValue(`--color-${key}`).trim();
+        
+        if (!cssColor) {
+            cssColor = defaultColors[jsKeyName];
+        }
+
+        let rgb = null;
+        if (cssColor.startsWith('rgb')) {
+            const matches = cssColor.match(/\d+/g);
+            if (matches && matches.length >= 3) {
+                rgb = [parseInt(matches[0]), parseInt(matches[1]), parseInt(matches[2])];
+            }
+        } else {
+            rgb = hexToRgb(cssColor);
+        }
+
+        if (rgb) {
+            // #511612(R:81)の赤チャンネルの輝度をベースに正確にターゲットRGBへマッピングするカラーマトリクス
+            // （元の赤が81の強度を持つため、81で除算した値を基準係数とすることで元の輝度スケールを完全に維持し、かつ黒(0)は常に黒のまま保つ）
+            const rFactor = (rgb[0] / 81).toFixed(4);
+            const gFactor = (rgb[1] / 81).toFixed(4);
+            const bFactor = (rgb[2] / 81).toFixed(4);
+
+            const filterHtml = `
+                <filter id="svg-filter-${jsKeyName}">
+                    <feColorMatrix type="matrix" values="
+                        ${rFactor} 0 0 0 0
+                        ${gFactor} 0 0 0 0
+                        ${bFactor} 0 0 0 0
+                        0 0 0 1 0
+                    " />
+                </filter>
+            `;
+            svgContainer.insertAdjacentHTML('beforeend', filterHtml);
+        }
+    });
+}
+
+// 定数と状態管理
 
 // タイピング音（Rainy75 Pro風のThocky音）の生成
 let audioCtx = null;
@@ -116,11 +182,11 @@ function playTypingSound(type = 'normal', key = '') {
             noiseVol = 0.06;
         }
 
-        // --- 系統A: 少し高めの音 (1.55倍) + 音量（0.225倍）（キー接触音：余韻を少し長く） ---
-        createSoundSource(thockFreq * 1.55, thockVol * 0.225, thockDecay * 0.75, tapFreq * 1.55, tapVol * 0.225, tapDecay * 0.75, noiseFreq * 1.55, noiseVol * 0.225, noiseDecay * 0.75, noiseQ, now, 0, hpFilter);
+        // --- 系統A: 少し高めの音 (1.55倍) + 音量（0.45倍）（キー接触音：余韻を少し長く） ---
+        createSoundSource(thockFreq * 1.55, thockVol * 0.45, thockDecay * 0.75, tapFreq * 1.55, tapVol * 0.45, tapDecay * 0.75, noiseFreq * 1.55, noiseVol * 0.45, noiseDecay * 0.75, noiseQ, now, 0, hpFilter);
 
-        // --- 系統B: 劇的に低い音 (0.4倍) + 音量（0.525倍）（0.1秒遅れて鳴る底打ちのコトコト音） ---
-        createSoundSource(thockFreq * 0.4, thockVol * 0.525, thockDecay * 1.8, tapFreq * 0.4, tapVol * 0.525, tapDecay * 1.8, noiseFreq * 0.4, noiseVol * 0.525, noiseDecay * 1.8, noiseQ, now, 0.1, hpFilter);
+        // --- 系統B: 劇的に低い音 (0.4倍) + 音量（1.05倍）（0.1秒遅れて鳴る底打ちのコトコト音） ---
+        createSoundSource(thockFreq * 0.4, thockVol * 1.05, thockDecay * 1.8, tapFreq * 0.4, tapVol * 1.05, tapDecay * 1.8, noiseFreq * 0.4, noiseVol * 1.05, noiseDecay * 1.8, noiseQ, now, 0.1, hpFilter);
 
     } catch (e) {
         console.warn("AudioContext playback failed: ", e);
@@ -326,7 +392,7 @@ const keysHiragana = [
 ];
 
 const keysKatakana = [
-    ["▶", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+    ["ー", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
     ["A", "S", "D", "F", "H", "J", "G", "K", "L", "BS"],
     ["Switch", "Z", "、", "C", "V", "B", "N", "M", "。", "Enter"]
 ];
@@ -346,6 +412,7 @@ window.addEventListener('DOMContentLoaded', () => {
     preloadActiveImg.src = 'keytop02.png';
 
     renderDisplay();
+    updateSVGFilters();
     buildKeyboard();
     setupEventListeners();
     setupPhysicalKeyboard();
@@ -628,14 +695,14 @@ function buildKeyboard() {
                 }
             }
 
-            // 1. キートップ背景画像レイヤーの追加（CSSフィルタで色変換）
+            // 1. キートップ背景画像レイヤーの追加 (動的SVGフィルタで完璧な色置換)
             const bgDiv = document.createElement('div');
             bgDiv.className = 'key-bg';
             bgDiv.dataset.colorType = keyColorType; // 物理キー打鍵時の色参照用
-            bgDiv.style.filter = keyFilters[keyColorType] || 'none';
+            bgDiv.style.filter = `url(#svg-filter-${keyColorType})`;
             button.appendChild(bgDiv);
 
-            // 2. キートップ文字・記号レイヤーの追加（背景画像の上に重なり、フィルタの影響を受けない）
+            // 2. キートップ文字・記号レイヤーの追加 (背景画像の上に重ねる)
             const textSpan = document.createElement('span');
             textSpan.className = 'key-text';
             if (keyText === "Switch") {
@@ -649,12 +716,12 @@ function buildKeyboard() {
             const setKeyActiveState = (isActive) => {
                 if (isActive) {
                     bgDiv.style.backgroundImage = "url('keytop02.png')";
-                    bgDiv.style.filter = (keyFilters[keyColorType] || 'none') + ' brightness(0.75)';
-                    textSpan.style.filter = 'brightness(0.75)'; // フォント色の明るさを25%落とす
+                    bgDiv.style.filter = `url(#svg-filter-${keyColorType}) brightness(0.75)`;
+                    textSpan.style.filter = 'brightness(0.75)'; // 文字も25%暗くする
                 } else {
                     bgDiv.style.backgroundImage = "url('keytop01.png')";
-                    bgDiv.style.filter = keyFilters[keyColorType] || 'none';
-                    textSpan.style.filter = 'none'; // 元に戻す
+                    bgDiv.style.filter = `url(#svg-filter-${keyColorType})`;
+                    textSpan.style.filter = 'none'; // 通常に戻す
                 }
             };
 
@@ -1756,8 +1823,10 @@ function findKeyCoords(eventKey) {
     else if (eventKey === "Insert") target = "Ins";
     else if (eventKey === " ") target = "Space";
     else if (eventKey === "-") {
-        if (currentMode === KeyboardMode.Hiragana || currentMode === KeyboardMode.Katakana) {
+        if (currentMode === KeyboardMode.Hiragana) {
             target = "▶";
+        } else if (currentMode === KeyboardMode.Katakana) {
+            target = "ー";
         }
     }
     else if (eventKey === ".") {
@@ -1817,7 +1886,7 @@ function setupPhysicalKeyboard() {
                     const colorType = bg ? bg.dataset.colorType : 'lower';
                     if (bg) {
                         bg.style.backgroundImage = "url('keytop02.png')";
-                        bg.style.filter = (keyFilters[colorType] || 'none') + ' brightness(0.75)';
+                        bg.style.filter = `url(#svg-filter-${colorType}) brightness(0.75)`;
                     }
                     if (txt) {
                         txt.style.filter = 'brightness(0.75)';
@@ -1845,8 +1914,10 @@ function setupPhysicalKeyboard() {
         } else if (e.key === "Insert") {
             mappedKey = "Ins";
         } else if (e.key === "-") {
-            if (currentMode === KeyboardMode.Hiragana || currentMode === KeyboardMode.Katakana) {
+            if (currentMode === KeyboardMode.Hiragana) {
                 mappedKey = "▶";
+            } else if (currentMode === KeyboardMode.Katakana) {
+                mappedKey = "ー";
             }
         } else if (e.key === ".") {
             if (currentMode === KeyboardMode.Hiragana || currentMode === KeyboardMode.Katakana) {
@@ -1883,7 +1954,7 @@ function setupPhysicalKeyboard() {
                 const colorType = bg ? bg.dataset.colorType : 'lower';
                 if (bg) {
                     bg.style.backgroundImage = "url('keytop01.png')";
-                    bg.style.filter = keyFilters[colorType] || 'none';
+                    bg.style.filter = `url(#svg-filter-${colorType})`;
                 }
                 if (txt) {
                     txt.style.filter = 'none';
@@ -2098,3 +2169,9 @@ function selectCandidate(word) {
     clearHiraganaBuffer();
     renderDisplay();
 }
+
+// 外部CSSの完全ロード後にSVGカラーマトリクスフィルタを再生成してキーボードへ反映
+window.addEventListener('load', () => {
+    updateSVGFilters();
+    buildKeyboard();
+});
