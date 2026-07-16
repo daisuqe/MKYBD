@@ -863,6 +863,8 @@ function showDragGuides() {
         guideOne.style.height = `${rectOne.height}px`;
 
         dragGuideContainer.style.display = 'block';
+        // オーバーレイを表示
+        document.querySelector('.app-container')?.classList.add('flick-active');
     }
 }
 
@@ -880,6 +882,8 @@ function hideDragGuides() {
         if (guideAt) guideAt.classList.remove('active');
         if (guideOne) guideOne.classList.remove('active');
     }
+    // オーバーレイを非表示
+    document.querySelector('.app-container')?.classList.remove('flick-active');
 }
 
 function getActiveGuideAtPoint(x, y) {

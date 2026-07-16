@@ -216,7 +216,7 @@ body {
 }
 
 .keyboard-hiragana .key {
-    background-color: #908868; /* 少し明るくしたピンク寄りの赤みがかったグレー */
+    background-color: #787058; /* 少し明るくしたピンク寄りの赤みがかったグレー */
     color: #f0f0f0; /* 文字色は白 */
 }
 .keyboard-hiragana .key:active {
@@ -227,7 +227,7 @@ body {
 .keyboard-hiragana .key.btn-enter,
 .keyboard-hiragana .key.btn-enter-bs,
 .keyboard-hiragana .key.btn-bs {
-    color: #f0f0f0;
+    color: #ffffff;
 }
 
 .keyboard-katakana .key {
@@ -301,7 +301,7 @@ body {
 }
 
 .key.btn-space {
-    background-color: #b0b288 !important; /* spaceKeyColor */
+    background-color: #908868 !important; /* spaceKeyColor */
     font-size: 3.2cqw !important;
 }
 .key.btn-space:active {
@@ -610,6 +610,24 @@ body {
     }
 }
 
+/* ─── フリックメニュー表示中オーバーレイ ─── */
+/* app-containerのcontainer-typeがstacking contextを形成するためz-indexが有効 */
+.app-container.flick-active::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: 450;
+    pointer-events: none;
+    border-radius: inherit;
+}
+
+/* Switchキー（A&a1）はオーバーレイより手前に表示 */
+.app-container.flick-active .key.btn-switch {
+    position: relative;
+    z-index: 451;
+}
+
 /* ドラッグガイドボタンのスタイル */
 .drag-guide-container {
     position: absolute;
@@ -632,7 +650,7 @@ body {
     font-size: 6.6cqw; /* 大文字キーと同等サイズに比率化 */
     font-weight: bold;
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.6);
-    border: 0.68cqw solid #e6730f; /* 輪郭をSwitchキーと同じオレンジに変更 (適度な太さに調整) */
+    border: 0.41cqw solid #e6730f; /* 枠太さを60%に縮小 (0.68→0.41cqw) */
     transition: transform 0.1s, border-color 0.1s, box-shadow 0.1s;
 }
 
