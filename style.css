@@ -1,12 +1,12 @@
 :root {
     /* 通常時のキーボード各キーのカラー設定 (書き換え可能) */
     --color-lower: #501800;        /* 小文字キー (低彩度・黄み寄りベージュ) */
-    --color-upper: #002c88;        /* 大文字キー */
+    --color-upper: #003088;        /* 大文字キー */
     --color-number: #38302a;       /* 数字キー(グレー) */
     --color-blue-number: #206000;  /* 数字キー(緑) */
     --color-symbol: #383630;       /* 記号キー */
-    --color-hiragana: #706450;     /* ひらがなキー */
-    --color-katakana: #783000;     /* カタカナキー */
+    --color-hiragana: #706a40;     /* ひらがなキー */
+    --color-katakana: #783400;     /* カタカナキー */
     --color-enter: #0070e0;        /* Enterキー (水色シアン) */
     --color-enter-bs: #a03016;     /* EnterBSキー */
     --color-bs: #982000;           /* BSキー */
