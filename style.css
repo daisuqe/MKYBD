@@ -183,13 +183,13 @@ body {
 }
 
 .key.char-len-1-lower {
-    font-size: 8.0cqw; /* スマホ表示のバランス向上のため、大文字と同じ8.0cqwに縮小 */
+    font-size: 8.6cqw; /* 大文字(8.0cqw)との見かけのバランスをとるため、8.6cqwへ微増 */
     line-height: 1;
 }
 
 /* qypjg 用のディセンダ補正（上に引き上げる） */
 .key.char-len-1-lower.descender-key {
-    padding-bottom: 1.1cqw; /* フォント縮小に合わせて調整 */
+    padding-bottom: 1.2cqw; /* フォントサイズ調整に合わせて微修正 */
 }
 
 .key.char-len-1-upper,

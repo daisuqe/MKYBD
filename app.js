@@ -125,7 +125,7 @@ function playTypingSound(type = 'normal', key = '') {
         hpFilter.frequency.setValueAtTime(55 * posFactor, now); // 低音側もposFactorに追従
 
         const masterGain = audioCtx.createGain();
-        masterGain.gain.setValueAtTime(0.24, now); // 全体の出力バランス調整
+        masterGain.gain.setValueAtTime(0.36, now); // 全体の出力バランス調整 (1.5倍に増強)
 
         hpFilter.connect(masterGain);
         masterGain.connect(audioCtx.destination);
