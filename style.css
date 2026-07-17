@@ -6,7 +6,7 @@
     --color-blue-number: #206000;  /* 数字キー(緑) */
     --color-symbol: #383630;       /* 記号キー */
     --color-hiragana: #705830;     /* ひらがなキー */
-    --color-katakana: #783a00;     /* カタカナキー */
+    --color-katakana: #703400;     /* カタカナキー */
     --color-enter: #0070e0;        /* Enterキー (水色シアン) */
     --color-enter-bs: #a03016;     /* EnterBSキー */
     --color-bs: #982000;           /* BSキー */
@@ -14,7 +14,7 @@
     --color-ins: #987000;          /* Insキー */
     --color-menu: #c97010;         /* Menuキー */
     --color-switch: #b05000;       /* Switchキー (少し暗めオレンジ寄り) */
-    --color-space: #907f40;        /* Spaceキー (ベージュ調) */
+    --color-space:  #A09474;        /* Spaceキー (ベージュ調) */
     --color-yellow: #b09000;       /* 特殊黄色キー(▶) */
 }
 
