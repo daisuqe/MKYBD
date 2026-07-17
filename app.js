@@ -127,8 +127,8 @@ function playTypingSound(type = 'normal', key = '', isRepeat = false) {
         hpFilter.frequency.setValueAtTime(hpFreq, now);
 
         const masterGain = audioCtx.createGain();
-        // リピート時の音量を最適化 (前回の70%の音量0.08に調整)
-        const mGain = isRepeat ? 0.08 : 0.36;
+        // 音量を直前の値の8割に微調整
+        const mGain = isRepeat ? 0.10 : 0.43;
         masterGain.gain.setValueAtTime(mGain, now);
 
         hpFilter.connect(masterGain);
@@ -756,7 +756,7 @@ function buildKeyboard() {
                 if (isActive) {
                     bgDiv.style.backgroundImage = "url('keytop02.png')";
                     bgDiv.style.filter = `url(#svg-filter-${keyColorType})`; // 画像の明るさは下げない
-                    textSpan.style.filter = 'brightness(0.75)'; // 文字のみ25%暗くする
+                    textSpan.style.filter = 'brightness(0.90)'; // 文字のみ少し暗くする(10%減)
                 } else {
                     bgDiv.style.backgroundImage = "url('keytop01.png')";
                     bgDiv.style.filter = `url(#svg-filter-${keyColorType})`;
@@ -1954,7 +1954,7 @@ function setupPhysicalKeyboard() {
                         bg.style.filter = `url(#svg-filter-${colorType})`;
                     }
                     if (txt) {
-                        txt.style.filter = 'brightness(0.75)';
+                        txt.style.filter = 'brightness(0.90)';
                     }
                 }
             }

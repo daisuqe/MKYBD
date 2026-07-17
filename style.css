@@ -1,20 +1,20 @@
 :root {
     /* 通常時のキーボード各キーのカラー設定 (書き換え可能) */
-    --color-lower: #401c0c;        /* 小文字キー (低彩度・黄み寄りベージュ) */
-    --color-upper: #083878;        /* 大文字キー */
+    --color-lower: #501800;        /* 小文字キー (低彩度・黄み寄りベージュ) */
+    --color-upper: #004494;        /* 大文字キー */
     --color-number: #38302a;       /* 数字キー(グレー) */
-    --color-blue-number: #005030;  /* 数字キー(緑) */
-    --color-symbol: #38302a;       /* 記号キー */
-    --color-hiragana: #685848;     /* ひらがなキー */
-    --color-katakana: #783808;     /* カタカナキー */
-    --color-enter: #0050d0;        /* Enterキー (水色シアン) */
+    --color-blue-number: #206000;  /* 数字キー(緑) */
+    --color-symbol: #383630;       /* 記号キー */
+    --color-hiragana: #706858;     /* ひらがなキー */
+    --color-katakana: #784000;     /* カタカナキー */
+    --color-enter: #0070e0;        /* Enterキー (水色シアン) */
     --color-enter-bs: #a03016;     /* EnterBSキー */
-    --color-bs: #762216;           /* BSキー */
+    --color-bs: #982000;           /* BSキー */
     --color-tab: #0048d0;          /* Tab/Navキー */
-    --color-ins: #887000;          /* Insキー */
+    --color-ins: #987000;          /* Insキー */
     --color-menu: #c97010;         /* Menuキー */
-    --color-switch: #d35000;       /* Switchキー (少し暗めオレンジ寄り) */
-    --color-space: #908070;        /* Spaceキー (ベージュ調) */
+    --color-switch: #b05000;       /* Switchキー (少し暗めオレンジ寄り) */
+    --color-space: #907f40;        /* Spaceキー (ベージュ調) */
     --color-yellow: #b09000;       /* 特殊黄色キー(▶) */
 }
 
