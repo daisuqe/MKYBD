@@ -500,7 +500,9 @@ function renderDisplay() {
                 }
                 if (unconfirmedText) {
                     const uSpan = document.createElement('span');
-                    uSpan.className = 'unconfirmed-text';
+                    if (currentMode !== KeyboardMode.Katakana) {
+                        uSpan.className = 'unconfirmed-text';
+                    }
                     uSpan.textContent = unconfirmedText;
                     contentSpan.appendChild(uSpan);
                 }
@@ -753,8 +755,8 @@ function buildKeyboard() {
             const setKeyActiveState = (isActive) => {
                 if (isActive) {
                     bgDiv.style.backgroundImage = "url('keytop02.png')";
-                    bgDiv.style.filter = `url(#svg-filter-${keyColorType}) brightness(0.75)`;
-                    textSpan.style.filter = 'brightness(0.75)'; // 文字も25%暗くする
+                    bgDiv.style.filter = `url(#svg-filter-${keyColorType})`; // 画像の明るさは下げない
+                    textSpan.style.filter = 'brightness(0.75)'; // 文字のみ25%暗くする
                 } else {
                     bgDiv.style.backgroundImage = "url('keytop01.png')";
                     bgDiv.style.filter = `url(#svg-filter-${keyColorType})`;
@@ -984,22 +986,28 @@ function checkAndConvertRomaji() {
 }
 
 function handleKatakanaInput(char) {
-    if (isConverting) {
-        clearHiraganaBuffer();
-    }
+    isConverting = false; // 辞書変換はカタカナモードでは常に無効
 
     if (!/^[a-z]$/.test(char)) {
         flushRomajiBuffer();
         insertText(char);
-        hiraganaBuffer += char;
-        lastInsertedLength = hiraganaBuffer.length;
+        clearHiraganaBuffer(); // 即時確定
         return;
     }
 
+    const prevKanaLen = hiraganaBuffer.length;
     romajiBuffer += char;
     insertText(char);
     checkAndConvertRomaji();
-    lastInsertedLength = hiraganaBuffer.length + romajiBuffer.length;
+
+    // 変換が走ってカタカナ文字が新しく生成された場合は即時確定とする
+    if (hiraganaBuffer.length > prevKanaLen) {
+        romajiBuffer = "";
+        clearHiraganaBuffer(); // バッファと lastInsertedLength を完全にクリア
+    } else {
+        // アルファベット入力途中(k等)はBackspaceで消せるように lastInsertedLength を設定
+        lastInsertedLength = romajiBuffer.length;
+    }
     renderDisplay();
 }
 
@@ -1943,7 +1951,7 @@ function setupPhysicalKeyboard() {
                     const colorType = bg ? bg.dataset.colorType : 'lower';
                     if (bg) {
                         bg.style.backgroundImage = "url('keytop02.png')";
-                        bg.style.filter = `url(#svg-filter-${colorType}) brightness(0.75)`;
+                        bg.style.filter = `url(#svg-filter-${colorType})`;
                     }
                     if (txt) {
                         txt.style.filter = 'brightness(0.75)';
@@ -2053,6 +2061,9 @@ function replaceInlineText(word) {
 }
 
 function startGoogleConversion() {
+    if (currentMode === KeyboardMode.Katakana) {
+        return; // カタカナモードは辞書変換しない
+    }
     flushRomajiBuffer();
     
     if (!hiraganaBuffer) {
