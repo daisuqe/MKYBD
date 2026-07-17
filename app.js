@@ -695,6 +695,23 @@ function buildKeyboard() {
                 }
             }
 
+            // 記号および特定のキーの位置微調整用クラスを追加
+            const targetSymbols = "{}[]|@();:,";
+            if (targetSymbols.includes(keyText)) {
+                button.classList.add('symbol-key');
+            }
+            if (keyText === "_") {
+                button.classList.add('key-underbar');
+            }
+            if (["←", "→", "↑", "↓"].includes(keyText)) {
+                button.classList.add('key-arrow');
+            }
+            if (keyText === "-") {
+                button.classList.add('key-minus');
+            } else if (keyText === "*") {
+                button.classList.add('key-asterisk');
+            }
+
             // 1. キートップ背景画像レイヤーの追加 (動的SVGフィルタで完璧な色置換)
             const bgDiv = document.createElement('div');
             bgDiv.className = 'key-bg';
@@ -1170,11 +1187,26 @@ function showDragGuides() {
         dragGuideContainer = document.createElement('div');
         dragGuideContainer.className = 'drag-guide-container';
         dragGuideContainer.innerHTML = `
-            <div class="drag-guide-key" id="guideHira" style="background-color: #908868; color: #ffffff;">あ</div>
-            <div class="drag-guide-key" id="guideKata" style="background-color: #886000; color: #ffffff;">ア</div>
-            <div class="drag-guide-key" id="guideA" style="background-color: #205080; color: #ffffff;">A</div>
-            <div class="drag-guide-key" id="guideAt" style="background-color: #484030; color: #ffffff;">&</div>
-            <div class="drag-guide-key" id="guideOne" style="background-color: #484030; color: #ffffff;">1</div>
+            <div class="drag-guide-key" id="guideHira">
+                <div class="key-bg" style="filter: url(#svg-filter-hiragana);"></div>
+                <span class="key-text">あ</span>
+            </div>
+            <div class="drag-guide-key" id="guideKata">
+                <div class="key-bg" style="filter: url(#svg-filter-katakana);"></div>
+                <span class="key-text">ア</span>
+            </div>
+            <div class="drag-guide-key" id="guideA">
+                <div class="key-bg" style="filter: url(#svg-filter-upper);"></div>
+                <span class="key-text">A</span>
+            </div>
+            <div class="drag-guide-key" id="guideAt">
+                <div class="key-bg" style="filter: url(#svg-filter-symbol);"></div>
+                <span class="key-text">&</span>
+            </div>
+            <div class="drag-guide-key" id="guideOne">
+                <div class="key-bg" style="filter: url(#svg-filter-blueNumber);"></div>
+                <span class="key-text">1</span>
+            </div>
         `;
         document.body.appendChild(dragGuideContainer);
     }

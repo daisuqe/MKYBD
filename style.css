@@ -6,7 +6,7 @@
     --color-blue-number: #005030;  /* 数字キー(緑) */
     --color-symbol: #38302a;       /* 記号キー */
     --color-hiragana: #685848;     /* ひらがなキー */
-    --color-katakana: #7e4010;     /* カタカナキー */
+    --color-katakana: #783808;     /* カタカナキー */
     --color-enter: #0050d0;        /* Enterキー (水色シアン) */
     --color-enter-bs: #a03016;     /* EnterBSキー */
     --color-bs: #762216;           /* BSキー */
@@ -14,7 +14,7 @@
     --color-ins: #887000;          /* Insキー */
     --color-menu: #c97010;         /* Menuキー */
     --color-switch: #d35000;       /* Switchキー (少し暗めオレンジ寄り) */
-    --color-space: #a09080;        /* Spaceキー (ベージュ調) */
+    --color-space: #908070;        /* Spaceキー (ベージュ調) */
     --color-yellow: #b09000;       /* 特殊黄色キー(▶) */
 }
 
@@ -182,15 +182,14 @@ body {
     width: 100%;
 }
 
-/* 文字数・ケースに応じたフォントサイズ定義 (コンテナ相対cqw単位で縦画面でも文字縮小が完全同期) */
 .key.char-len-1-lower {
-    font-size: 9.8cqw;
+    font-size: 8.0cqw; /* スマホ表示のバランス向上のため、大文字と同じ8.0cqwに縮小 */
     line-height: 1;
 }
 
 /* qypjg 用のディセンダ補正（上に引き上げる） */
 .key.char-len-1-lower.descender-key {
-    padding-bottom: 1.4cqw;
+    padding-bottom: 1.1cqw; /* フォント縮小に合わせて調整 */
 }
 
 .key.char-len-1-upper,
@@ -219,6 +218,27 @@ body {
 
 .key.char-len-5 {
     font-size: 2.8cqw;
+}
+
+/* 記号文字の下へのはみ出し対策: テキストを少し上に持ち上げる */
+.key.symbol-key .key-text {
+    transform: translateY(-0.8cqw);
+}
+
+/* アンダーバーと矢印キーをさらに上に引き上げる補正 */
+.key.key-underbar .key-text {
+    transform: translateY(-2.8cqw);
+}
+.key.key-arrow .key-text {
+    transform: translateY(-1.2cqw);
+}
+
+/* マイナスとアスタリスクの垂直位置調整（プラス + の中心に合わせる） */
+.key.key-minus .key-text {
+    transform: translateY(-0.6cqw); /* プラスの中心に揃えるために上に引き上げる */
+}
+.key.key-asterisk .key-text {
+    transform: translateY(1.55cqw); /* プラスの中心に揃えるために少し下に下げる */
 }
 
 /* キーボードモードごとのカラー設定 */
@@ -693,6 +713,7 @@ body {
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.6);
     border: 0.41cqw solid #e6730f; /* 枠太さを60%に縮小 (0.68→0.41cqw) */
     transition: transform 0.1s, border-color 0.1s, box-shadow 0.1s;
+    overflow: hidden; /* 子要素のkey-bg画像が角丸からはみ出るのを防止 */
 }
 
 /* ドラッグ中のホバー強調表示 */
