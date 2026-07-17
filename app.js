@@ -101,7 +101,7 @@ const keyPositions = {
     "↑": 7, "↓": 7, "←": 6, "→": 8
 };
 
-function playTypingSound(type = 'normal', key = '') {
+function playTypingSound(type = 'normal', key = '', isRepeat = false) {
     try {
         if (!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -122,10 +122,14 @@ function playTypingSound(type = 'normal', key = '') {
         // --- 共通のハイパスフィルターとマスターゲイン ---
         const hpFilter = audioCtx.createBiquadFilter();
         hpFilter.type = 'highpass';
-        hpFilter.frequency.setValueAtTime(55 * posFactor, now); // 低音側もposFactorに追従
+        // リピート時は不要な低音をさらに削るため、ハイパスのカットオフ周波数を引き上げる
+        const hpFreq = isRepeat ? 180 * posFactor : 55 * posFactor;
+        hpFilter.frequency.setValueAtTime(hpFreq, now);
 
         const masterGain = audioCtx.createGain();
-        masterGain.gain.setValueAtTime(0.36, now); // 全体の出力バランス調整 (1.5倍に増強)
+        // リピート時の音量を最適化 (前回の70%の音量0.08に調整)
+        const mGain = isRepeat ? 0.08 : 0.36;
+        masterGain.gain.setValueAtTime(mGain, now);
 
         hpFilter.connect(masterGain);
         masterGain.connect(audioCtx.destination);
@@ -182,11 +186,22 @@ function playTypingSound(type = 'normal', key = '') {
             noiseVol = 0.06;
         }
 
-        // --- 系統A: 少し高めの音 (1.55倍) + 音量（0.45倍）（キー接触音：余韻を少し長く） ---
-        createSoundSource(thockFreq * 1.55, thockVol * 0.45, thockDecay * 0.75, tapFreq * 1.55, tapVol * 0.45, tapDecay * 0.75, noiseFreq * 1.55, noiseVol * 0.45, noiseDecay * 0.75, noiseQ, now, 0, hpFilter);
-
-        // --- 系統B: 劇的に低い音 (0.4倍) + 音量（1.05倍）（0.1秒遅れて鳴る底打ちのコトコト音） ---
-        createSoundSource(thockFreq * 0.4, thockVol * 1.05, thockDecay * 1.8, tapFreq * 0.4, tapVol * 1.05, tapDecay * 1.8, noiseFreq * 0.4, noiseVol * 1.05, noiseDecay * 1.8, noiseQ, now, 0.1, hpFilter);
+        if (isRepeat) {
+            // 【リピート連続入力時】前回の70%音量かつ少し低めに抑えたマイルドな打鍵音
+            // 低音(thock)をカットし、中高音(Tap/Noise)の周波数倍率を1.2倍へ下げて低音化、余韻を0.008秒と超高速に切る
+            createSoundSource(
+                0, 0, 0, // thockをカット
+                tapFreq * 1.2, 0.9, 0.008, 
+                noiseFreq * 1.2, 0.6, 0.008, 
+                noiseQ, now, 0, hpFilter
+            );
+        } else {
+            // 【通常打鍵時】高音(接触) ＋ 低音(底打ち) を重ねる
+            // 系統A: 高音 (1.55倍) + 音量小
+            createSoundSource(thockFreq * 1.55, thockVol * 0.45, thockDecay * 0.75, tapFreq * 1.55, tapVol * 0.45, tapDecay * 0.75, noiseFreq * 1.55, noiseVol * 0.45, noiseDecay * 0.75, noiseQ, now, 0, hpFilter);
+            // 系統B: 低音コトコト音 (0.4倍) + 遅延再生
+            createSoundSource(thockFreq * 0.4, thockVol * 1.05, thockDecay * 1.8, tapFreq * 0.4, tapVol * 1.05, tapDecay * 1.8, noiseFreq * 0.4, noiseVol * 1.05, noiseDecay * 1.8, noiseQ, now, 0.1, hpFilter);
+        }
 
     } catch (e) {
         console.warn("AudioContext playback failed: ", e);
@@ -195,66 +210,71 @@ function playTypingSound(type = 'normal', key = '') {
 
 // レイヤー音源生成用サブ関数 (ディレイ対応)
 function createSoundSource(thockF, thockV, thockD, tapF, tapV, tapD, noiseF, noiseV, noiseD, noiseQ, now, delay, destination) {
-    const oscThock = audioCtx.createOscillator();
-    const gainThock = audioCtx.createGain();
-    oscThock.type = 'sine';
-
-    const oscTap = audioCtx.createOscillator();
-    const gainTap = audioCtx.createGain();
-    oscTap.type = 'triangle';
-
-    const bufferSize = audioCtx.sampleRate * 0.04;
-    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-    const output = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-        output[i] = Math.random() * 2 - 1;
-    }
-    const noiseSource = audioCtx.createBufferSource();
-    noiseSource.buffer = noiseBuffer;
-
-    const noiseFilter = audioCtx.createBiquadFilter();
-    noiseFilter.type = 'bandpass';
-    const gainNoise = audioCtx.createGain();
-
-    oscThock.connect(gainThock);
-    gainThock.connect(destination);
-
-    oscTap.connect(gainTap);
-    gainTap.connect(destination);
-
-    noiseSource.connect(noiseFilter);
-    noiseFilter.connect(gainNoise);
-    gainNoise.connect(destination);
-
     const targetTime = now + delay;
 
-    // Thock
-    oscThock.frequency.setValueAtTime(thockF, targetTime);
-    gainThock.gain.setValueAtTime(0.001, targetTime);
-    gainThock.gain.linearRampToValueAtTime(thockV, targetTime + 0.003); 
-    gainThock.gain.exponentialRampToValueAtTime(0.001, targetTime + thockD);
+    // Thock音源 (低音)
+    if (thockF > 0 && thockV > 0) {
+        const oscThock = audioCtx.createOscillator();
+        const gainThock = audioCtx.createGain();
+        oscThock.type = 'sine';
+        oscThock.connect(gainThock);
+        gainThock.connect(destination);
 
-    // Tap
-    oscTap.frequency.setValueAtTime(tapF, targetTime);
-    gainTap.gain.setValueAtTime(0.001, targetTime);
-    gainTap.gain.linearRampToValueAtTime(tapV, targetTime + 0.002);
-    gainTap.gain.exponentialRampToValueAtTime(0.001, targetTime + tapD);
+        oscThock.frequency.setValueAtTime(thockF, targetTime);
+        gainThock.gain.setValueAtTime(0.001, targetTime);
+        gainThock.gain.linearRampToValueAtTime(thockV, targetTime + 0.003); 
+        gainThock.gain.exponentialRampToValueAtTime(0.001, targetTime + thockD);
 
-    // Noise
-    noiseFilter.frequency.setValueAtTime(noiseF, targetTime);
-    noiseFilter.Q.setValueAtTime(noiseQ, targetTime);
-    gainNoise.gain.setValueAtTime(0.001, targetTime);
-    gainNoise.gain.linearRampToValueAtTime(noiseV, targetTime + 0.002);
-    gainNoise.gain.exponentialRampToValueAtTime(0.001, targetTime + noiseD);
+        oscThock.start(targetTime);
+        oscThock.stop(targetTime + thockD);
+    }
 
-    oscThock.start(targetTime);
-    oscThock.stop(targetTime + thockD + 0.05);
+    // Tap音源 (中高音)
+    if (tapF > 0 && tapV > 0) {
+        const oscTap = audioCtx.createOscillator();
+        const gainTap = audioCtx.createGain();
+        oscTap.type = 'triangle';
+        oscTap.connect(gainTap);
+        gainTap.connect(destination);
 
-    oscTap.start(targetTime);
-    oscTap.stop(targetTime + tapD + 0.05);
+        oscTap.frequency.setValueAtTime(tapF, targetTime);
+        gainTap.gain.setValueAtTime(0.001, targetTime);
+        gainTap.gain.linearRampToValueAtTime(tapV, targetTime + 0.002);
+        gainTap.gain.exponentialRampToValueAtTime(0.001, targetTime + tapD);
 
-    noiseSource.start(targetTime);
-    noiseSource.stop(targetTime + noiseD + 0.05);
+        oscTap.start(targetTime);
+        oscTap.stop(targetTime + tapD);
+    }
+
+    // Noise音源 (高音こすれ音)
+    if (noiseF > 0 && noiseV > 0) {
+        const bufferSize = audioCtx.sampleRate * 0.04;
+        const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            output[i] = Math.random() * 2 - 1;
+        }
+        const noiseSource = audioCtx.createBufferSource();
+        noiseSource.buffer = noiseBuffer;
+
+        const noiseFilter = audioCtx.createBiquadFilter();
+        noiseFilter.type = 'bandpass';
+        const gainNoise = audioCtx.createGain();
+
+        noiseSource.connect(noiseFilter);
+        noiseFilter.connect(gainNoise);
+        gainNoise.connect(destination);
+
+        noiseFilter.frequency.setValueAtTime(noiseF, targetTime);
+        noiseFilter.Q.setValueAtTime(noiseQ, targetTime);
+
+        gainNoise.gain.setValueAtTime(0.001, targetTime);
+        gainNoise.gain.linearRampToValueAtTime(noiseV, targetTime + 0.002);
+        gainNoise.gain.exponentialRampToValueAtTime(0.001, targetTime + noiseD);
+
+        noiseSource.start(targetTime);
+        noiseSource.stop(targetTime + noiseD);
+    }
 }
 
 const KeyboardMode = {
@@ -793,17 +813,22 @@ function buildKeyboard() {
 function handleKeyInput(key, isRepeatInput = false) {
     if (key === "") return;
 
-    // タイピング音を再生 (Rainy75 Pro風、押しっぱなしの時は最初の1回のみ)
-    if (!isRepeatInput && !repeatInterval) {
-        let soundType = 'normal';
-        if (key === 'Space') {
-            soundType = 'space';
-        } else if (key === 'Enter') {
-            soundType = 'enter';
-        } else if (key === 'BS') {
-            soundType = 'bs';
-        }
-        playTypingSound(soundType, key);
+    // タイピング音を再生 (通常音 or リピート専用音)
+    let soundType = 'normal';
+    if (key === 'Space') {
+        soundType = 'space';
+    } else if (key === 'Enter') {
+        soundType = 'enter';
+    } else if (key === 'BS') {
+        soundType = 'bs';
+    }
+
+    if (isRepeatInput) {
+        // キーリピート連続入力時は高音・小音量のリピート専用音を再生
+        playTypingSound(soundType, key, true);
+    } else {
+        // 通常の単発打鍵時は通常の打鍵音を再生
+        playTypingSound(soundType, key, false);
     }
 
     if (key === "Tab") {
